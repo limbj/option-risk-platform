@@ -1,7 +1,7 @@
 # 로컬 실행과 복구
 
 이 MVP는 로컬 Docker Desktop Linux 엔진에서 실행한다. 외부 서비스에는 배포하지 않았다.
-사용자 요청에 따라 기본 로컬 모드는 로그인 화면을 생략하고 기존 demo 세션을 자동 시작한다.
+기본 로컬 모드는 로그인 화면을 생략하고 기존 demo 세션을 자동 시작한다.
 `LOCAL_DEMO_MODE=false`면 명시 인증을 사용한다. production 설정은 자동 진입 모드를 거부한다.
 `scripts/bootstrap_demo.py`가 `.env`를 생성하고 DB/migration/데모 계정/학습 모델/이미지를 준비한다.
 초기 데이터와 모델은 다시 생성할 수 있으며 실제 시장 데이터가 아니다.
@@ -21,6 +21,10 @@
 API·워커는 같은 소스를 담은 이미지와 읽기 전용 `artifacts/`를 사용한다.
 GPU 없이 CPU PyTorch를 사용한다. 데이터 볼륨을 유지하려면 `docker compose stop` 또는
 `docker compose down`을 사용하고 `down -v`는 데이터 삭제를 의도한 경우에만 실행한다.
+
+Nginx는 Docker 내부 DNS로 API 주소를 주기적으로 갱신한다. API 컨테이너를 다시 생성해
+IP가 바뀌어도 웹 컨테이너를 재시작할 필요가 없다. 설정은 Nginx 1.28의
+[동적 upstream 주소 갱신](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)을 사용한다.
 
 ## 복구
 
@@ -44,13 +48,13 @@ docker compose exec api python manage.py recover_work
 
 ## 사용 범위
 
-사용자는 외부 서버 배포와 인터넷 공개를 제외했다. Docker의 공개 포트는 localhost에만
+로컬 전용 애플리케이션이며 외부 서버 배포와 인터넷 공개를 포함하지 않는다. Docker 포트는 localhost에만
 바인딩한다. 사용자는 계정 생성·비밀번호 입력 없이 바로 작업공간을 사용한다.
 명시 인증 코드는 소유권·세션 회귀검증용으로 보존하며, 기본 화면에는 로그인·로그아웃을 표시하지 않는다.
-기존 production 설정은 자동 demo 진입을 거부하지만 이번 작업에서 외부 배포에 사용하지 않는다.
+production 설정은 자동 demo 진입을 거부한다.
 
-실행 provenance에는 설치 버전과 Python source SHA-256이 들어간다. `CODE_VERSION`을 배포
-커밋으로 추가 지정할 수 있다. 코드/라이브러리가 달라진 오래된 queued run은 조용히 다른
+실행 provenance에는 설치 버전과 Python source SHA-256이 들어간다. `CODE_VERSION`에 실행 소스
+커밋을 추가 지정할 수 있다. 코드/라이브러리가 달라진 오래된 queued run은 조용히 다른
 환경으로 실행하지 않고 실패로 기록된다. 재현하려면 기록된 이미지/lock을 사용한다.
 
 데이터 백업은 PostgreSQL native pg_dump/restore와 artifact 디렉터리를 함께 보존한다.

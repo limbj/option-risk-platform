@@ -1,4 +1,4 @@
-"""Strict JSON-shaped input parsing, reusable by future HTTP and CSV adapters."""
+"""Strict JSON-shaped input parsing shared by input adapters."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass

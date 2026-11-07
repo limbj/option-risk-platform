@@ -1,4 +1,4 @@
-"""Initial routes. Resource APIs are introduced with persistence in stage 4."""
+"""Session, portfolio, valuation, artifact and administration routes."""
 
 from django.contrib import admin
 from django.urls import path

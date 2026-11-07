@@ -1,1 +1,1 @@
-"""Django app boundaries; models and use cases are added in stage 4."""
+"""Django applications for portfolios, market inputs and valuation execution."""

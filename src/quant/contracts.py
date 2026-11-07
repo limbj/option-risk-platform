@@ -1,8 +1,7 @@
 """Immutable financial contracts for the initial synthetic, USD-only profile.
 
 The supported options are European and cash settled, with no dividends (q=0).
-Prices, portfolio aggregation and stress application are implemented in later
-stages; this module defines and validates their shared inputs only.
+Pricing, aggregation and stress modules share the validated inputs defined here.
 """
 
 from dataclasses import dataclass
@@ -144,7 +143,7 @@ class StressScenario:
 
     Those examples convert to relative spot change 0.10, absolute initial
     volatility change 0.05 and absolute annual rate change 0.01. Stress is
-    instantaneous: a future transformation must preserve valuation date.
+    instantaneous: transformations preserve the valuation date.
     """
 
     name: str

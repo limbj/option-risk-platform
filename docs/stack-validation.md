@@ -56,37 +56,83 @@ uv run --locked --extra ml --env-file .env python scripts/verify_worker_recovery
 100 positions × 100 scenarios를 생성하고, read-only PostgreSQL 조회에서 RUNNING lease를
 확인한 다음 이 프로젝트의 worker container에만 SIGKILL을 전송한다. `finally`에서 worker를
 재시작한 뒤 기본 300초 lease의 실제 만료와 dispatcher 재전송을 기다린다. DB 시각이나 lease
-만료값을 조작하지 않는다. 처음 RUNNING이었던 chunk의 `attempts > 1` 및 `lease expired`
+만료값을 조작하지 않는다. 중단 직후 RUNNING인 chunk의 `attempts > 1` 및 `lease expired`
 기록, 10,000개 고유 결과 셀, 100개 완전한 총계를 모두 만족해야 성공한다.
 결과는 `work/worker-recovery.json`이며 소스 image ID와 run provenance도 포함한다.
 
 ## 실행 결과
 
-2026-11-08 01:45 KST, `http://127.0.0.1:8000`의 실제 Linux container stack에서
-`--recovery-dispatcher`를 포함하여 실행했다. **18개 검사·6개 run이 모두 통과**했고,
-전체 실행시간은 25.09초였다. API·PostgreSQL·Redis·prefork Celery worker·dispatcher가
+2026-11-08 02:01 KST, `http://127.0.0.1:8000`의 실제 Linux container stack에서
+두 사용자 계정과 `--recovery-dispatcher`를 포함하여 재검증했다.
+**19개 검사·6개 run이 모두 통과**했고, 전체 실행시간은 20.24초였다.
+API·PostgreSQL·Redis·prefork Celery worker·dispatcher가
 실제로 동작했으며, 마지막에 모든 서비스가 running임을 확인했다.
 
 | Run | 셀 수 | POST 202 | 서버 생성→완료 | 제출→완료 polling wall |
 | --- | ---: | ---: | ---: | ---: |
-| REFERENCE | 4 | 83.69 ms | 2.534 s | 2.728 s |
-| 최초 COMPARE | 4 | 49.49 ms | 5.749 s | 6.049 s |
-| REFERENCE 재실행 | 4 | 49.36 ms | 1.334 s | 1.486 s |
-| Call-put parity·stress 단위 | 6 | 52.53 ms | 1.972 s | 2.302 s |
-| ML 범위 밖·reference 유지 | 4 | 67.57 ms | 1.679 s | 1.792 s |
-| Dispatcher 중단 후 복구 | 4 | 59.42 ms | 4.608 s | 4.875 s |
+| REFERENCE | 4 | 52.45 ms | 0.333 s | 0.410 s |
+| Worker 재시작 후 첫 COMPARE | 4 | 61.68 ms | 4.739 s | 4.859 s |
+| REFERENCE 재실행 | 4 | 46.49 ms | 1.037 s | 1.227 s |
+| Call-put parity·stress 단위 | 6 | 44.91 ms | 1.903 s | 2.083 s |
+| ML 범위 밖·reference 유지 | 4 | 51.83 ms | 1.729 s | 2.033 s |
+| Dispatcher 중단 후 복구 | 4 | 61.62 ms | 4.022 s | 4.199 s |
 
-첫 COMPARE의 첫 ML 셀은 약 27.4~27.9ms였고 이후 warm ML 셀은 약 0.13~0.32ms였다.
+이번 COMPARE의 ML 셀 계산 시간은 약 0.18~0.79ms였다.
 Reference base 셀에는 bump/reprice 민감도 계산도 포함된다. Artifact 로딩·처음 라이브러리
 import·dispatcher 주기·DB/queue 대기 비용 때문에 per-cell 계산 시간의 합은 end-to-end
-시간과 같지 않다. 위 최초 요청과 이후 warm 요청을 같은 성능 수치로 비교하지 않는다.
+시간과 같지 않다. 최초 요청과 이후 warm 요청을 같은 성능 수치로 비교하지 않는다.
 
 Dispatcher 중단 중 새 run의 202 접수·DB 보존·QUEUED·빈 결과·null 총계/P&L을 확인했다.
 재시작 이후 모든 required cell이 정확히 한 번씩 보고되고 합계가 완성됐다.
-이는 실제 durable outbox 재개 검증이다. Worker 프로세스 중단/lease 만료 복구는
-이 dispatcher 실험과 별도의 시험이며 이 스크립트에서는 실행하지 않았다.
+이는 실제 durable outbox 재개 검증이다.
 
-두 번째 계정의 credential을 이 실행에 제공하지 않아 cross-owner HTTP 검증은
-`not_run_no_second_account_credentials`로 명시했다. 별도의 Django ownership 회귀 테스트와
-구분하며, 실제 두 계정 네트워크 시험을 수행한 것으로 주장하지 않는다.
-상세 ID·각 셀 timing·pinned provenance·총계는 `work/stack-validation.json`에 남아 있다.
+별도 두 번째 사용자 세션에서 타인의 입력·run·export 조회 및 입력 실행·run 재시도가
+모두 HTTP 404로 거부됨을 확인했다. Local demo 자동 진입 설정 아래에서도 명시적으로
+로그인한 두 번째 사용자의 세션과 리소스 소유권이 보존됐다.
+상세 ID·각 셀 timing·pinned provenance·총계는 `work/stack-final-validation.json`에 남아 있다.
+01:45 KST의 첫 실행(18개 검사, 소유권 미실행) 기록은 `work/stack-validation.json`이다.
+
+### 실제 SIGKILL 및 lease 복구
+
+2026-11-08 01:55:13 KST에 별도 `verify_worker_recovery.py` 실험에서 worker container를
+SIGKILL로 종료하고 즉시 재시작했다. 이때 계산 중이던 scenario 6·7의 lease가 남아 있었다.
+계산이 끝난 9,800개 셀은 그대로 유지됐고, 288.7초 관측까지 이 두 chunk의 attempts는 1이었다.
+기존 lease가 유효한 동안 중복 실행을 막는 동작을 실제 DB 상태로 확인했다.
+
+300초 lease가 자연 만료된 후 dispatcher가 작업을 다시 발행했다. 서버에서는 run 생성 후
+**301.819708초**에 완료됐으며, 20초 polling의 다음 관측인 중단 후 309.1초에 완료를 확인했다.
+클라이언트 전체 관측 시간은 310.12초였다. DB 시각·lease 값을 앞당기지 않았다.
+
+| 항목 | 관측 결과 |
+| --- | --- |
+| 계산 규모 | 100 positions × 100 scenarios |
+| 완료 결과 | 10,000개 고유 셀, 100개 완전한 scenario 총계/P&L |
+| 중단된 chunk | scenario 6·7, 두 chunk 모두 attempts=2 |
+| 복구 근거 | 두 chunk의 `last_error`에 `Previous worker lease expired` 보존 |
+| 중복 셀 | 0 |
+| 실패값을 대신한 0 | 없음; 구성한 양의 가격 입력의 모든 reference price > 0 |
+| 최종 상태 | 모든 chunk와 run COMPLETED; worker를 포함한 모든 서비스 running |
+
+Run ID는 `899acb1d-deca-4980-ba1b-945d41c6542f`이며, 상세 read-only DB snapshot과
+20초 간격의 진행 기록은 `work/worker-recovery.json`에 있다.
+API·worker·dispatcher의 image ID가 동일함을 실험 전에 검사했다.
+
+- Image ID: `5df9ab195e43a8481c6e2c9e88d4a99c2bfedc9193eaa9da27e45d970018d3d0`
+- Run source SHA-256: `e065bb6aab7f0d702580d4722b3e9d277bc3db0b61fa559e339fbc055aa8a7ed`
+
+이 실험은 실제 프로세스 손실·자연 lease 만료·재처리·최종 결과 완전성을 검증한다.
+추가적인 중복 메시지·오래된 attempt token·저장 이후 재호출·최대 재시도 실패 경로는
+별도의 worker 회귀 테스트와 함께 평가한다.
+
+### API 주소 변경 후 nginx 자동 복구
+
+2026-11-08 02:08 KST에 프로젝트 Docker network의 사용 중인 주소를 확인한 뒤 API 주소를
+`172.18.0.6`에서 미사용 주소 `172.18.0.200`으로 바꿨다. `api` DNS alias를 유지했으며,
+web container 재시작 없이 일시적인 연결 실패 후 **3.54초에** nginx 경유
+`/api/session/`이 HTTP 200과 인증된 demo session을 반환했다.
+`finally`에서 원래 주소로 복원했고 같은 endpoint가 **3.55초에** 다시 HTTP 200으로 회복됐다.
+
+web·API container의 ID와 StartedAt은 시험 전후 동일했다. DB 삭제나 다른 서비스 중단은
+수행하지 않았다. 이는 Docker DNS를 5초 주기로 갱신하는 nginx upstream 설정이 실제 주소
+변경을 따라가는지 확인한 결과이며, 전환 중 무중단을 보장한다는 뜻은 아니다.
+관측 기록은 `work/nginx-dns-validation.json`에 보존했다.

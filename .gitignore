@@ -31,7 +31,7 @@ artifacts/
 *.log
 work/
 
-# Frontend (added in stage 5) and editor/OS files
+# Frontend and editor/OS files
 node_modules/
 .vscode/
 .idea/

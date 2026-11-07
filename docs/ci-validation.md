@@ -1,8 +1,26 @@
 # MVP CI 검증 구성
 
 `.github/workflows/ci.yml`의 `MVP acceptance`는 push, pull request, 수동 실행에서
-단일 Ubuntu job을 수행한다. 이 문서 작성 시점에는 workflow 구성과 로컬 검증을
-마쳤으며, **GitHub Actions 전체 원격 성공은 아직 확인하지 않았다**.
+단일 Ubuntu job을 수행한다.
+
+2026-11-08 01:58(KST), commit `bb0d2c36a1f1e930e07c7ed7344c516034a63f0c`의
+[GitHub Actions 실행 42393470972](https://github.com/limbj/option-risk-platform/actions/runs/42393470972)이
+**성공**했다. 전체 job 소요 시간은 5분 37초였다.
+
+| 검사 | 원격 결과 |
+| --- | --- |
+| Host 전체 pytest | 443 passed, 4 PostgreSQL 전용 skipped |
+| Host PostgreSQL | 66 passed |
+| Linux 이미지 전체 pytest | 443 passed, 4 PostgreSQL 전용 skipped |
+| Linux 이미지 PostgreSQL | 66 passed |
+| Frontend 단위 테스트 / build | 7 passed / 성공 |
+| 실제 16,000 표본·350 epochs 학습 및 품질 gate | 성공 |
+| HTTP·인증·소유권·큐·dispatcher 복구 | 19개 검사, 6개 실행 통과 |
+| Playwright 브라우저·모바일 workflow | 1 passed |
+
+JUnit·로그·ML 검증 report·UI 스크린샷은
+[실행 증거 artifact](https://github.com/limbj/option-risk-platform/actions/runs/42393470972/artifacts/13583035641)에
+보존된다(14일 보존 정책).
 
 ## 실행 순서
 
@@ -49,18 +67,10 @@ repository secrets를 사용하지 않는다. Compose는 기존 로컬 `.env`를
 ## 구성 검증
 
 workflow YAML 파싱, job/step 구조, 필요한 검사 명령과 artifact 수집 경로를 확인했다.
-개별 애플리케이션의 로컬 검증 결과는 `numerical-validation.md`, `review-findings.md`,
-`ml-validation.md`, `stack-validation.md`에서 관리한다. 이 결과를 원격 CI 성공으로
-간주하지 않으며, 실제 Actions 실행 결과를 확인한 뒤 원격 상태를 갱신한다.
-
-첫 [원격 실행 42392892323](https://github.com/limbj/option-risk-platform/actions/runs/42392892323)은
-Python·frontend·PostgreSQL·Linux 이미지 검사와 실제 학습·품질 gate까지 통과했다.
-해당 commit의 host/container 전체 pytest는 각각 428 passed, 4 PostgreSQL 전용 skip이며,
-host/container PostgreSQL 검사는 각각 51 passed, 프론트 단위 테스트는 7 passed였다.
-서비스 시작 직후 첫 HTTP probe가 `curl (56) Connection reset by peer`를 만나 종료하여
-API/브라우저 단계에는 도달하지 못했다. 기존 연결 거절 전용 retry를 모든 일시적 연결
-오류 retry로 바꾸고 전체 120초, 연결 2초, 개별 요청 10초 상한을 명시했다.
-지속적인 서비스 오류는 시간 제한 후 실패로 남긴다. 수정 후 원격 재검증은 대기 중이다.
+개별 애플리케이션의 로컬 검증 결과는 `numerical-validation.md`, `ml-validation.md`,
+`stack-validation.md`에서 관리한다.
+서비스 readiness 검사는 일시적 연결 reset도 재시도하며, 전체 120초·연결 2초·개별 요청
+10초 상한을 둔다. 지속적인 서비스 오류는 시간 제한 후 CI 실패로 남긴다.
 
 현재 action 입력과 Node 실행 방식은 공식
 [checkout](https://github.com/actions/checkout),
