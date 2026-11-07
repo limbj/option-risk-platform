@@ -14,3 +14,12 @@
 - Use Linux containers for Celery development on Windows. Keep test databases, generated datasets, model artifacts, and secrets out of Git.
 - The preparation conversation did not authorize an initial commit or push for this repository. Follow the user's instructions in the new conversation for implementation and Git operations.
 - Communicate with the user in Korean.
+
+## Implementation conversation decisions (2026-11-08)
+
+- The user authorized intermediate commits and pushes after validated milestones.
+- Stage 7 ends with local Docker execution, a reproducible demo, CI, and documentation.
+  Do not deploy to an external server or publish the app on the internet.
+- The default local demo opens without a login screen, using an existing demo session internally.
+  Preserve session/CSRF and ownership checks. Explicit multi-user authentication remains available;
+  automatic demo entry must be rejected by production settings.

@@ -17,7 +17,10 @@ python -m venv work/bootstrap
 python scripts/bootstrap_demo.py
 ```
 
-**http://127.0.0.1:5173** → 사용자 `demo`, 비밀번호는 생성된 `.env`의 `DEMO_PASSWORD`입니다.
+**http://127.0.0.1:5173**을 열면 로그인 화면 없이 로컬 작업공간으로 진입합니다.
+내부 데모 계정에 데이터·이력을 보존하며 CSRF와 소유권 검사는 유지합니다.
+여러 사용자 인증 흐름은 `LOCAL_DEMO_MODE=false`로 전환해 사용할 수 있습니다.
+그 경우 사용자 `demo`, 비밀번호는 `.env`의 `DEMO_PASSWORD`입니다.
 기존 `.env`를 사용한다면 비밀번호를 12자 이상으로 설정하세요. 기존 DB·산출물은 삭제하지 않습니다.
 비밀키·DB·데이터셋·가중치는 Git에서 제외됩니다.
 
@@ -80,7 +83,7 @@ SQLite 메모리 DB는 빠른 테스트 전용이고 PostgreSQL trigger·동시�
 
 실행과 outbox를 같은 트랜잭션에 저장하고 큐에는 ID만 전달합니다. 고정된 입력과 해시를
 재검증하고 lease/attempt token으로 중복·지연 결과를 차단합니다. 전체 설계는
-`PROJECT_BRIEF.txt`를 참고하세요. 외부 배포는 별도 승인 대상입니다.
+`PROJECT_BRIEF.txt`를 참고하세요. 사용자 결정에 따라 외부 서버 배포·인터넷 공개는 하지 않습니다.
 
 기술 근거: [Django](https://www.djangoproject.com/download/),
 [DRF](https://www.django-rest-framework.org/),

@@ -3,6 +3,16 @@ Prepared: 2026-11-08 (Asia/Seoul)
 Repository: https://github.com/limbj/option-risk-platform.git
 Project folder: D:\git\option-risk-platform
 
+LATEST IMPLEMENTATION DECISIONS — 2026-11-08
+
+- Continue all seven stages without routine approval checkpoints.
+- Validated intermediate commits and pushes are authorized.
+- Do not deploy to an external server or publish on the internet. Stage 7 means local Docker,
+  reproducible demo, CI, recovery verification, and documentation only.
+- Default local use should open the workspace without a login screen. Use the existing demo
+  account internally while preserving session, CSRF, and resource ownership checks. Explicit
+  authentication remains available for testing; production settings reject automatic demo entry.
+
 STATUS AND USER INTENT
 
 The user has created the GitHub repository and requested the project folder under D:\git.

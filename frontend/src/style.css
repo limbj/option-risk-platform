@@ -981,3 +981,7 @@ footer {
     gap: 15px;
   }
 }
+.run-timing {
+  padding: 0 25px;
+  font-size: 10px;
+}

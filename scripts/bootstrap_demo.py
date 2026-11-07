@@ -29,7 +29,7 @@ def main():
     if not env_file.exists():
         env_file.write_text(
             f"DJANGO_SECRET_KEY={secrets.token_urlsafe(64)}\n"
-            "DJANGO_DEBUG=false\nDJANGO_ALLOWED_HOSTS=localhost,127.0.0.1\n"
+            "DJANGO_DEBUG=false\nLOCAL_DEMO_MODE=true\nDJANGO_ALLOWED_HOSTS=localhost,127.0.0.1\n"
             "POSTGRES_DB=option_risk\nPOSTGRES_USER=option_risk\n"
             f"POSTGRES_PASSWORD={secrets.token_urlsafe(32)}\n"
             "POSTGRES_HOST=127.0.0.1\nPOSTGRES_PORT=5432\n"
@@ -82,7 +82,7 @@ def main():
     if not args.skip_build:
         run("docker", "compose", "build", "api", "web")
     run("docker", "compose", "up", "-d", "api", "worker", "dispatcher", "web")
-    print("Local demo: http://127.0.0.1:5173 | user: demo | password: DEMO_PASSWORD in .env")
+    print("Local demo: http://127.0.0.1:5173 | opens directly in local demo mode")
 
 
 if __name__ == "__main__":

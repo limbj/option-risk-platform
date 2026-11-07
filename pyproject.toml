@@ -57,4 +57,3 @@ extend-exclude = ["work"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-

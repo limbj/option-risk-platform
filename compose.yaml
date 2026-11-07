@@ -12,6 +12,7 @@ x-app-environment: &app-environment
   CELERY_BROKER_URL: redis://redis:6379/0
   ARTIFACT_ROOT: /app/artifacts
   CODE_VERSION: ${CODE_VERSION:-uncommitted}
+  LOCAL_DEMO_MODE: ${LOCAL_DEMO_MODE:-true}
 
 services:
   db:

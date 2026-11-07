@@ -8,11 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     PATH="/app/.venv/bin:$PATH"
 WORKDIR /app
-COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --locked --extra ml --no-install-project
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --extra ml --no-install-project
 COPY src ./src
-COPY manage.py ./
-RUN uv sync --locked --extra ml
+COPY manage.py README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --extra ml
 COPY tests ./tests
 COPY examples ./examples
 RUN python manage.py collectstatic --noinput --settings=config.settings.test

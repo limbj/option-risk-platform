@@ -1,6 +1,8 @@
-# 실행·배포 준비와 운영
+# 로컬 실행과 복구
 
 이 MVP는 로컬 Docker Desktop Linux 엔진에서 실행한다. 외부 서비스에는 배포하지 않았다.
+사용자 요청에 따라 기본 로컬 모드는 로그인 화면을 생략하고 기존 demo 세션을 자동 시작한다.
+`LOCAL_DEMO_MODE=false`면 명시 인증을 사용한다. production 설정은 자동 진입 모드를 거부한다.
 `scripts/bootstrap_demo.py`가 `.env`를 생성하고 DB/migration/데모 계정/학습 모델/이미지를 준비한다.
 초기 데이터와 모델은 다시 생성할 수 있으며 실제 시장 데이터가 아니다.
 
@@ -40,19 +42,12 @@ docker compose exec api python manage.py recover_work
 결과 수정 대신 동일 입력으로 새 실행을 만든다. 모델 파일은 기존 버전 경로에 덮어쓰지 않고
 새 경로에서 검증한 뒤 `register_artifact` 명령으로 새 버전을 등록한다.
 
-## 외부 배포 시 적용할 설정
+## 사용 범위
 
-외부 배포는 별도 지시가 필요하다. 배포 대상에서는 TLS 종료 proxy와 private DB/Redis,
-비밀 저장소, 백업·복원·모니터링을 운영자가 구성한다. 로컬 `.env`의 데모 비밀번호는 배포에 사용하지 않는다.
-
-`DJANGO_SETTINGS_MODULE=config.settings.production`, 50자 이상의 랜덤 `DJANGO_SECRET_KEY`,
-명시한 `DJANGO_ALLOWED_HOSTS`, HTTPS `DJANGO_CSRF_TRUSTED_ORIGINS`를 지정한다.
-secure cookie/HTTPS redirect/HSTS가 적용된다. 신뢰하는 proxy가 외부 forwarded header를
-제거하는 경우에만 `DJANGO_TRUST_PROXY=true`를 설정한다. POST 요청의 CSRF를 우회하지 않는다.
-
-```powershell
-uv run --locked --extra ml --env-file .env python manage.py check --deploy --settings=config.settings.production
-```
+사용자는 외부 서버 배포와 인터넷 공개를 제외했다. Docker의 공개 포트는 localhost에만
+바인딩한다. 사용자는 계정 생성·비밀번호 입력 없이 바로 작업공간을 사용한다.
+명시 인증 코드는 소유권·세션 회귀검증용으로 보존하며, 기본 화면에는 로그인·로그아웃을 표시하지 않는다.
+기존 production 설정은 자동 demo 진입을 거부하지만 이번 작업에서 외부 배포에 사용하지 않는다.
 
 실행 provenance에는 설치 버전과 Python source SHA-256이 들어간다. `CODE_VERSION`을 배포
 커밋으로 추가 지정할 수 있다. 코드/라이브러리가 달라진 오래된 queued run은 조용히 다른

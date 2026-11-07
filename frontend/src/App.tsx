@@ -39,6 +39,7 @@ type Session = {
   authenticated: boolean;
   user: { id: number; username: string } | null;
   csrfToken: string;
+  localDemoMode?: boolean;
 };
 
 function NumberField({
@@ -113,6 +114,14 @@ export default function App() {
     enabled: loggedIn && !!selectedRun,
     refetchInterval: (query) => (pending(query.state.data) ? 1000 : false),
   });
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [tab]);
+  useEffect(() => {
+    if (run.data && !pending(run.data)) {
+      client.invalidateQueries({ queryKey: ["runs"] });
+    }
+  }, [run.data?.status, selectedRun, client]);
   const artifacts = useQuery({
     queryKey: ["models"],
     queryFn: () => api<{ items: Artifact[] }>("models/"),
@@ -150,6 +159,7 @@ export default function App() {
       }),
     onSuccess: (data) => {
       setSelectedRun(data.id);
+      setNotice("");
       setTab("평가 · 실행 이력");
       client.invalidateQueries({ queryKey: ["runs"] });
     },
@@ -175,6 +185,14 @@ export default function App() {
     launch.error,
     retry.error,
   ].find(Boolean);
+
+  if (session.isPending)
+    return (
+      <main className="empty">
+        <h1>Option Risk</h1>
+        <p>작업공간을 열고 있습니다.</p>
+      </main>
+    );
 
   if (!loggedIn)
     return (
@@ -289,19 +307,23 @@ export default function App() {
             모든 결과에 입력과 모델을 기록합니다.
           </p>
         </div>
-        <button
-          className="logout"
-          onClick={async () => {
-            await api("logout/", {});
-            setInputs(undefined);
-            setSaved(undefined);
-            setSelectedRun(undefined);
-            client.clear();
-            client.invalidateQueries();
-          }}
-        >
-          로그아웃 · {session.data?.user?.username}
-        </button>
+        {session.data?.localDemoMode ? (
+          <div className="logout">로컬 작업공간 · 자동 진입</div>
+        ) : (
+          <button
+            className="logout"
+            onClick={async () => {
+              await api("logout/", {});
+              setInputs(undefined);
+              setSaved(undefined);
+              setSelectedRun(undefined);
+              client.clear();
+              client.invalidateQueries();
+            }}
+          >
+            로그아웃 · {session.data?.user?.username}
+          </button>
+        )}
       </aside>
       <main className="main">
         <header>
@@ -1014,6 +1036,10 @@ export default function App() {
                         max={run.data.progress.total || 1}
                       />
                     </div>
+                    <p className="muted run-timing">
+                      접수부터 완료까지 {money(run.data.elapsed_seconds, 3)}초 ·
+                      큐 대기와 저장 포함
+                    </p>
                     {run.data.error && (
                       <p className="error">{run.data.error}</p>
                     )}
@@ -1135,6 +1161,27 @@ export default function App() {
                               {run.data!.mode === "COMPARE" && (
                                 <td>
                                   {money(cell.ml_price, 4)}
+                                  <small className="block">
+                                    가격 차이 {money(cell.price_error, 4)}
+                                  </small>
+                                  <small className="block">
+                                    기준{" "}
+                                    {money(
+                                      cell.timings?.reference_seconds == null
+                                        ? null
+                                        : cell.timings.reference_seconds * 1000,
+                                      3,
+                                    )}{" "}
+                                    ms
+                                    {" / ML "}
+                                    {money(
+                                      cell.timings?.ml_seconds == null
+                                        ? null
+                                        : cell.timings.ml_seconds * 1000,
+                                      3,
+                                    )}{" "}
+                                    ms
+                                  </small>
                                   {cell.ml_error && (
                                     <small className="error block">
                                       {cell.ml_error}

@@ -2,18 +2,22 @@ import { test, expect } from "@playwright/test";
 
 test("login, immutable input, reference valuation, compare, export and responsive layout", async ({
   page,
-  request,
 }) => {
-  if (!process.env.DEMO_PASSWORD)
-    throw new Error("DEMO_PASSWORD must be supplied from local environment");
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await page
-    .getByLabel("사용자 이름")
-    .fill(process.env.DEMO_USERNAME ?? "demo");
-  await page.getByLabel("비밀번호").fill(process.env.DEMO_PASSWORD);
-  await page.getByRole("button", { name: "실험실 열기" }).click();
+  if (process.env.LOCAL_DEMO_MODE === "true") {
+    await expect(page.getByText("로컬 작업공간 · 자동 진입")).toBeVisible();
+    await expect(page.getByLabel("비밀번호")).toHaveCount(0);
+  } else {
+    if (!process.env.DEMO_PASSWORD)
+      throw new Error("DEMO_PASSWORD required for authenticated mode");
+    await page
+      .getByLabel("사용자 이름")
+      .fill(process.env.DEMO_USERNAME ?? "demo");
+    await page.getByLabel("비밀번호").fill(process.env.DEMO_PASSWORD);
+    await page.getByRole("button", { name: "실험실 열기" }).click();
+  }
   await expect(
     page.getByRole("heading", { name: "포트폴리오 구성" }),
   ).toBeVisible();

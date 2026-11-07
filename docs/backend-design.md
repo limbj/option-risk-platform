@@ -12,6 +12,8 @@
 
 Django 세션 인증과 CSRF를 사용한다. `GET /api/session/`이 로그인 상태와 CSRF 토큰을 반환한다. 익명 로그인 요청도 CSRF 검증을 통과해야 한다. 로그인 성공 시 세션/CSRF가 갱신된다. `/api/health/`는 공개 liveness이며 DB/Redis의 상태를 보장하지 않는다. 금융 API는 기본 인증 필수다.
 
+로컬 데모 진입을 단순화하려면 development 설정에서 `LOCAL_DEMO_MODE=true`를 지정한다. 이때 익명 사용자의 `/api/session/` 호출은 `seed_demo`로 미리 준비한 active `demo` 계정의 일반 Django 세션을 자동으로 시작한다. 다른 사용자의 기존 세션은 바꾸지 않는다. 요청 파라미터로 계정을 선택하거나 새 계정을 만들 수 없으며 demo 계정이 없으면 준비 명령을 안내하는 503을 반환한다. 이후 금융 API의 세션·CSRF·소유권 검사는 그대로 적용된다. 응답의 `localDemoMode`는 프런트엔드의 로컬 작업공간 표시용이다. backend 기본값은 false이며 production 설정에서는 활성화를 거부한다. 이 모드를 사용하는 Compose 서비스는 localhost에만 공개한다.
+
 ## 실행과 outbox
 
 `POST /api/runs/`는 소유자별 idempotency key를 사용한다. 같은 키와 같은 요청은 같은 실행을 반환하고 다른 요청은 409다. 실행·시나리오별 청크·outbox 이벤트를 같은 `transaction.atomic()`에서 만든 후 HTTP 202를 반환한다. 요청 경로는 계산하거나 Redis에 발행하지 않는다.

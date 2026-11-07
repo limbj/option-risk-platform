@@ -17,6 +17,10 @@ _debug_value = os.environ.get("DJANGO_DEBUG", "false").lower()
 if _debug_value not in {"true", "false", "1", "0"}:
     raise ImproperlyConfigured("DJANGO_DEBUG must be true, false, 1, or 0.")
 DEBUG = _debug_value in {"true", "1"}
+_local_demo_value = os.environ.get("LOCAL_DEMO_MODE", "false").strip().lower()
+if _local_demo_value not in {"true", "false", "1", "0"}:
+    raise ImproperlyConfigured("LOCAL_DEMO_MODE must be true, false, 1, or 0.")
+LOCAL_DEMO_MODE = _local_demo_value in {"true", "1"}
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")

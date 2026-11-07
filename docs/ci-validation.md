@@ -2,7 +2,7 @@
 
 `.github/workflows/ci.yml`의 `MVP acceptance`는 push, pull request, 수동 실행에서
 단일 Ubuntu job을 수행한다. 이 문서 작성 시점에는 workflow 구성과 로컬 검증을
-마쳤으며, **GitHub Actions 원격 실행 성공은 아직 확인하지 않았다**.
+마쳤으며, **GitHub Actions 전체 원격 성공은 아직 확인하지 않았다**.
 
 ## 실행 순서
 
@@ -39,6 +39,9 @@ repository secrets를 사용하지 않는다. Compose는 기존 로컬 `.env`를
 스크립트 대신 job 환경변수를 사용한다. 실행 마지막에는 runner의 컨테이너와 볼륨을
 정리한다. 이미지 push나 외부 배포는 수행하지 않는다.
 
+로컬 체험의 자동 진입과 인증 검증을 구분하기 위해 CI는 `LOCAL_DEMO_MODE=false`를
+명시한다. 실제 로그인·CSRF·소유자 격리는 이 인증 모드에서 계속 검증한다.
+
 전체 job은 35분 제한이며 같은 branch/ref의 이전 실행은 새 실행으로 교체한다.
 정확도 gate는 필수이고 속도향상은 보고 항목이다. OS/CPU가 바뀌면 측정 시간과
 학습 부동소수점 결과가 달라질 수 있으므로 기존 가중치를 성공 증거로 재사용하지 않는다.
@@ -49,6 +52,15 @@ workflow YAML 파싱, job/step 구조, 필요한 검사 명령과 artifact 수�
 개별 애플리케이션의 로컬 검증 결과는 `numerical-validation.md`, `review-findings.md`,
 `ml-validation.md`, `stack-validation.md`에서 관리한다. 이 결과를 원격 CI 성공으로
 간주하지 않으며, 실제 Actions 실행 결과를 확인한 뒤 원격 상태를 갱신한다.
+
+첫 [원격 실행 42392892323](https://github.com/limbj/option-risk-platform/actions/runs/42392892323)은
+Python·frontend·PostgreSQL·Linux 이미지 검사와 실제 학습·품질 gate까지 통과했다.
+해당 commit의 host/container 전체 pytest는 각각 428 passed, 4 PostgreSQL 전용 skip이며,
+host/container PostgreSQL 검사는 각각 51 passed, 프론트 단위 테스트는 7 passed였다.
+서비스 시작 직후 첫 HTTP probe가 `curl (56) Connection reset by peer`를 만나 종료하여
+API/브라우저 단계에는 도달하지 못했다. 기존 연결 거절 전용 retry를 모든 일시적 연결
+오류 retry로 바꾸고 전체 120초, 연결 2초, 개별 요청 10초 상한을 명시했다.
+지속적인 서비스 오류는 시간 제한 후 실패로 남긴다. 수정 후 원격 재검증은 대기 중이다.
 
 현재 action 입력과 Node 실행 방식은 공식
 [checkout](https://github.com/actions/checkout),

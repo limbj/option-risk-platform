@@ -24,6 +24,7 @@ jobs:
     env:
       DJANGO_SECRET_KEY: ci-only-django-key-for-disposable-tests-never-use-for-deployment-2026
       DJANGO_DEBUG: "false"
+      LOCAL_DEMO_MODE: "false"
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       POSTGRES_DB: option_risk_ci
       POSTGRES_USER: option_risk_ci
@@ -125,9 +126,11 @@ jobs:
       - name: Start and await the complete Linux stack
         run: |
           docker compose up -d --no-build api worker dispatcher web
-          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused \
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors \
+            --retry-max-time 120 --connect-timeout 2 --max-time 10 \
             http://127.0.0.1:8000/api/health/ > work/ci/api-health.json
-          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused \
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors \
+            --retry-max-time 120 --connect-timeout 2 --max-time 10 \
             http://127.0.0.1:5173/ > work/ci/web-index.html
 
       - name: Verify actual HTTP, queue, ownership and dispatcher recovery

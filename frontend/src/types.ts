@@ -48,6 +48,8 @@ export type Cell = {
   ml_price: number | null;
   ml_value: number | null;
   ml_error: string;
+  timings?: { reference_seconds?: number; ml_seconds?: number };
+  price_error?: number | null;
 };
 export type Total = {
   scenario_index: number;
@@ -70,6 +72,7 @@ export type Run = {
   pinned_inputs?: Inputs;
   provenance?: Record<string, unknown>;
   error?: string;
+  elapsed_seconds?: number | null;
 };
 export type Artifact = {
   id: string;

@@ -7,6 +7,7 @@ BASE_DIR = Path(os.environ.get("PROJECT_ROOT", str(Path(__file__).resolve().pare
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 DEBUG = False
+LOCAL_DEMO_MODE = False
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [

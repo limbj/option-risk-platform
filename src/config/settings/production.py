@@ -7,6 +7,9 @@ from django.core.exceptions import ImproperlyConfigured
 from .base import *  # noqa: F403
 from .base import SECRET_KEY
 
+if os.environ.get("LOCAL_DEMO_MODE", "false").strip().lower() not in {"false", "0"}:
+    raise ImproperlyConfigured("LOCAL_DEMO_MODE must be disabled in production.")
+
 if len(SECRET_KEY) < 50:
     raise ImproperlyConfigured("Production DJANGO_SECRET_KEY must contain at least 50 characters")
 ALLOWED_HOSTS = [
