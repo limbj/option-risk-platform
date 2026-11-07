@@ -73,7 +73,7 @@ docker compose up -d db redis api worker dispatcher web # 다시 시작
 
 ## 검증
 
-[GitHub Actions 전체 검증](https://github.com/limbj/option-risk-platform/actions/runs/42393470972)이 통과했습니다.
+[GitHub Actions 전체 검증](https://github.com/limbj/option-risk-platform/actions/runs/42394826035)이 통과했습니다.
 
 | 검사 | 확인 결과 |
 | --- | --- |
