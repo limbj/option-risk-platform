@@ -1,1 +1,1 @@
-"""Explicit settings profiles: development and test."""
+"""Django settings profiles for local execution and tests."""

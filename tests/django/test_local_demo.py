@@ -51,7 +51,7 @@ def test_auto_entry_cannot_access_another_owners_inputs(settings, django_user_mo
     settings.LOCAL_DEMO_MODE = True
     django_user_model.objects.create_user(username="demo")
     other = django_user_model.objects.create_user(username="other")
-    payload = json.loads((settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text())
+    payload = json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text())
     inputs = create_inputs(other, "Private input", payload)
     client = APIClient()
     assert client.get("/api/session/").status_code == 200

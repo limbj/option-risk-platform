@@ -1,6 +1,6 @@
-# MVP CI 검증 구성
+# CI 검증
 
-`.github/workflows/ci.yml`의 `MVP acceptance`는 push, pull request, 수동 실행에서
+`.github/workflows/ci.yml`의 `CI`는 push, pull request, 수동 실행에서
 단일 Ubuntu job을 수행한다.
 
 2026-11-08 02:42(KST), commit `bd6863d35fe89096a4bd9ba595b3a3da71637cc3`의
@@ -19,7 +19,7 @@
 | Playwright 브라우저·모바일 workflow | 1 passed; 1440/1024/390 화면·키보드 표·모델 버전 선택 포함 |
 
 JUnit·로그·ML 검증 report·UI 스크린샷은
-[실행 증거 artifact](https://github.com/limbj/option-risk-platform/actions/runs/42397207266/artifacts/13584172013)에
+[검사 결과 artifact](https://github.com/limbj/option-risk-platform/actions/runs/42397207266/artifacts/13584172013)에
 보존된다(14일 보존 정책).
 
 ## 실행 순서
@@ -45,7 +45,7 @@ JUnit·로그·ML 검증 report·UI 스크린샷은
 9. Playwright로 로그인부터 CSV 입력, REFERENCE/COMPARE, 다운로드, 히트맵,
    모바일 레이아웃까지 확인한다.
 
-## 증거와 실행 환경
+## 결과 보관과 실행 환경
 
 Host pytest JUnit, PostgreSQL JUnit, 컨테이너 테스트 로그, stack JSON report,
 학습·gate 로그, validation report와 manifest, UI 스크린샷 및 실패 trace를
@@ -62,18 +62,7 @@ repository secrets를 사용하지 않는다. Compose는 기존 로컬 `.env`를
 
 전체 job은 35분 제한이며 같은 branch/ref의 이전 실행은 새 실행으로 교체한다.
 정확도 gate는 필수이고 속도향상은 보고 항목이다. OS/CPU가 바뀌면 측정 시간과
-학습 부동소수점 결과가 달라질 수 있으므로 기존 가중치를 성공 증거로 재사용하지 않는다.
+학습 부동소수점 결과가 달라질 수 있으므로 실행마다 새 가중치를 학습하고 평가한다.
 
-## 구성 검증
-
-workflow YAML 파싱, job/step 구조, 필요한 검사 명령과 artifact 수집 경로를 확인했다.
-개별 애플리케이션의 로컬 검증 결과는 `numerical-validation.md`, `ml-validation.md`,
-`stack-validation.md`에서 관리한다.
 서비스 readiness 검사는 일시적 연결 reset도 재시도하며, 전체 120초·연결 2초·개별 요청
 10초 상한을 둔다. 지속적인 서비스 오류는 시간 제한 후 CI 실패로 남긴다.
-
-현재 action 입력과 Node 실행 방식은 공식
-[checkout](https://github.com/actions/checkout),
-[setup-node](https://github.com/actions/setup-node),
-[setup-uv](https://github.com/astral-sh/setup-uv),
-[upload-artifact](https://github.com/actions/upload-artifact) 문서를 확인했다.

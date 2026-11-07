@@ -35,7 +35,7 @@ def test_concurrent_requests_and_chunk_claims_are_unique(django_user_model):
     if connection.vendor != "postgresql":
         pytest.skip("Requires real PostgreSQL row locks")
     owner = django_user_model.objects.create_user(username="concurrent-owner")
-    payload = json.loads((settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text())
+    payload = json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text())
     inputs = create_inputs(owner, "Concurrency fixture", payload)
     returned = concurrent_calls(lambda: create_run(owner, inputs, "REFERENCE", "same-request"))
     assert returned[0][0].pk == returned[1][0].pk

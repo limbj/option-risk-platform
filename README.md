@@ -183,7 +183,7 @@ Teacher 실패 입력과 사유는 보존하며 실패한 label을 0으로 만�
 | 실제 worker 강제 종료 | SIGKILL 후 lease 만료를 거쳐 **10,000개 결과·100개 총계** 복구, 중복 **0건** |
 
 Worker 강제 종료 시험은 DB 시각을 조작하지 않고 기본 300초 lease를 기다렸으며 309.1초에 복구를 확인했습니다.
-[CI 증거](docs/ci-validation.md)와 [실제 실행·복구 기록](docs/stack-validation.md)에 환경과 확인 항목이 있습니다.
+[CI 검증](docs/ci-validation.md)과 [서비스 통합·복구 검증](docs/stack-validation.md)에 환경과 확인 항목이 있습니다.
 
 ## 프로젝트 구조
 
@@ -241,5 +241,5 @@ docker compose up -d db redis api worker dispatcher web
 
 - [금융 입력 계약](docs/financial-contracts.md) · [수치 계산 검증](docs/numerical-validation.md)
 - [백엔드 실행·복구 설계](docs/backend-design.md) · [ML 학습·검증 보고서](docs/ml-validation.md)
-- [실제 stack·worker 복구 기록](docs/stack-validation.md) · [CI 검증](docs/ci-validation.md)
-- [개발·테스트 명령](docs/development.md) · [로컬 운영 가이드](docs/deployment.md)
+- [서비스 통합·복구 검증](docs/stack-validation.md) · [CI 검증](docs/ci-validation.md)
+- [개발·테스트 명령](docs/development.md) · [로컬 운영 가이드](docs/local-operations.md)

@@ -280,7 +280,7 @@ export default function App() {
               className="primary"
               disabled={!session.data || login.isPending}
             >
-              실험실 열기
+              로그인
             </button>
             {(login.error || session.error) && (
               <p role="alert" className="error">

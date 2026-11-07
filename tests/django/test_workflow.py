@@ -22,7 +22,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def payload():
-    return json.loads((settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text())
+    return json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text())
 
 
 @pytest.fixture

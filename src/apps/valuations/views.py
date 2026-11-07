@@ -45,7 +45,7 @@ def owned_run(request, run_id):
 
 @api_view(["GET"])
 def sample(request):
-    return Response(json.loads((settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text()))
+    return Response(json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text()))
 
 
 @api_view(["GET", "POST"])

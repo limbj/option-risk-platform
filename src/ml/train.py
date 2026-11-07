@@ -133,7 +133,7 @@ def main(argv=None):
     report["training_seconds"] = training_seconds
     report["baseline_policy"] = (
         "Measured errors; no production-risk authorization. "
-        "Gates may be supplied after baseline review."
+        "Pass --gates to evaluate explicit quality thresholds."
     )
     if args.gates:
         gates = json.loads(args.gates.read_text(encoding="utf-8"))

@@ -1,6 +1,6 @@
 # 백엔드 실행·복구 설계
 
-애플리케이션 DB는 PostgreSQL이다. `config.settings.test`의 메모리 SQLite는 빠른 HTTP·서비스 검사용이다. DB trigger와 동시성 증거는 `config.settings.postgres_test`로 PostgreSQL에서 별도로 확인한다.
+애플리케이션 DB는 PostgreSQL이다. `config.settings.test`의 메모리 SQLite는 빠른 HTTP·서비스 검사용이다. DB trigger와 동시성은 `config.settings.postgres_test`로 PostgreSQL에서 별도로 검증한다.
 
 ## 입력과 소유권
 
@@ -8,11 +8,13 @@
 
 발행된 버전·아티팩트·결과는 ORM 저장/갱신/삭제를 거부하고 Admin에서도 읽기 전용이다. PostgreSQL trigger는 raw SQL UPDATE/DELETE도 거부한다. 실행의 입력 ID·provenance는 생성 이후 바꿀 수 없고, 완료 실행과 완료 청크도 DB에서 변경을 거부한다. DB 관리자에게는 일반적으로 trigger 우회 권한이 있으므로 운영 DB 권한과 백업은 별도로 관리한다.
 
-## 인증
+## 로컬 세션과 인증
 
-Django 세션 인증과 CSRF를 사용한다. `GET /api/session/`이 로그인 상태와 CSRF 토큰을 반환한다. 익명 로그인 요청도 CSRF 검증을 통과해야 한다. 로그인 성공 시 세션/CSRF가 갱신된다. `/api/health/`는 공개 liveness이며 DB/Redis의 상태를 보장하지 않는다. 금융 API는 기본 인증 필수다.
+로컬 Compose의 기본값은 `LOCAL_DEMO_MODE=true`다. 계정 생성이나 비밀번호 입력 없이 `GET /api/session/`이 미리 준비한 active `demo` 계정의 Django 세션을 시작하고 CSRF 토큰을 반환한다. 금융 API에는 이 세션의 인증·CSRF·소유권 검사를 적용한다. 다른 사용자의 기존 세션은 유지하며 요청 파라미터로 계정을 고를 수 없다. demo 계정이 없으면 준비 명령을 안내하는 503을 반환한다.
 
-로컬 데모 진입을 단순화하려면 development 설정에서 `LOCAL_DEMO_MODE=true`를 지정한다. 이때 익명 사용자의 `/api/session/` 호출은 `seed_demo`로 미리 준비한 active `demo` 계정의 일반 Django 세션을 자동으로 시작한다. 다른 사용자의 기존 세션은 바꾸지 않는다. 요청 파라미터로 계정을 선택하거나 새 계정을 만들 수 없으며 demo 계정이 없으면 준비 명령을 안내하는 503을 반환한다. 이후 금융 API의 세션·CSRF·소유권 검사는 그대로 적용된다. 응답의 `localDemoMode`는 프런트엔드의 로컬 작업공간 표시용이다. backend 기본값은 false이며 production 설정에서는 활성화를 거부한다. 이 모드를 사용하는 Compose 서비스는 localhost에만 공개한다.
+`LOCAL_DEMO_MODE=false`에서는 명시적으로 로그인해야 한다. 로그인 요청에도 CSRF를 검사하고 성공 시 세션과 토큰을 갱신한다. 이 경로는 인증·소유권 회귀검사에 사용한다. backend 설정 자체의 기본값은 false이며 production 설정은 자동 진입 모드를 거부한다. Compose의 호스트 포트는 localhost에만 바인딩한다.
+
+`/api/health/`는 인증 없이 HTTP 프로세스 응답 여부를 확인하는 liveness endpoint이며 DB·Redis 상태를 검사하지 않는다.
 
 ## 실행과 outbox
 
@@ -34,7 +36,7 @@ dispatcher는 만료 lease를 복구하고 발행 후 300초 동안 시작되지
 
 가격/민감도 실패 셀은 `FAILED`와 오류 이유를 갖고 가격·가치는 null이다. 모든 필수 reference 셀이 성공한 시나리오에만 총액을 제공한다. P&L에는 완전한 base와 stress 총액이 모두 필요하다. 결과의 0은 실제 계산된 0이며 실패 대체값이 아니다.
 
-COMPARE는 reference를 권위 있는 결과로 유지한다. ML 미지원 영역, 모델 사양 불일치, artifact 무결성 실패는 ML 오류 이유로 남고 reference를 보존한다. ML 총액과 P&L도 같은 ML 모델의 모든 필수 셀이 완전할 때만 제공한다. 단위당 base Delta/Gamma/initial-volatility sensitivity와 실제 bump를 함께 기록하며 초기 변동성 민감도는 decimal sigma0 1.0당이다.
+COMPARE는 reference를 기준 결과로 사용한다. ML 미지원 영역, 모델 사양 불일치, artifact 무결성 실패는 ML 오류 이유로 남고 reference를 보존한다. ML 총액과 P&L도 같은 ML 모델의 모든 필수 셀이 완전할 때만 제공한다. 단위당 base Delta/Gamma/initial-volatility sensitivity와 실제 bump를 함께 기록하며 초기 변동성 민감도는 decimal sigma0 1.0당이다.
 
 새로운 재시도는 같은 입력·artifact를 참조하는 새 실행이다. 과거 결과를 덮어쓰지 않는다. JSON/CSV export는 입력·모델·코드 출처와 완전성 정보를 보존한다. CSV의 사용자 입력 이름은 수식 실행을 방지하도록 escape한다.
 

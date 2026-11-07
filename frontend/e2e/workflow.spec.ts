@@ -29,7 +29,7 @@ test("login, immutable input, reference valuation, compare, export and responsiv
       .getByLabel("사용자 이름")
       .fill(process.env.DEMO_USERNAME ?? "demo");
     await page.getByLabel("비밀번호").fill(process.env.DEMO_PASSWORD);
-    await page.getByRole("button", { name: "실험실 열기" }).click();
+    await page.getByRole("button", { name: "로그인", exact: true }).click();
   }
   await expect(
     page.getByRole("heading", { name: "포트폴리오 구성" }),

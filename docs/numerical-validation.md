@@ -79,12 +79,8 @@ QuantLib 날짜 범위(1901~2199) 밖 입력도 명시적 계산 실패다.
 Feller 조건은 금융 계약의 필수 제약으로 강제하지 않는다. 위험 감응도는 기준
 엔진에서만 계산하며, ML 미분이나 성능 개선은 이 문서의 검증 대상이 아니다.
 
-## 근거
+## 참고 자료
 
-적분 설정과 수치 극한 검증 방법은 QuantLib의 공식
-[AnalyticHestonEngine 선언](https://github.com/lballabio/QuantLib/blob/master/ql/pricingengines/vanilla/analytichestonengine.hpp)
-및 [Heston 테스트](https://github.com/lballabio/QuantLib/blob/master/test-suite/hestonmodel.cpp)의
-`testAnalyticVsBlack`를 확인했다. 재사용 시 파라미터 순서
-`theta, kappa, xi, rho, v0`는 공식
-[HestonModel 구현](https://github.com/lballabio/QuantLib/blob/master/ql/models/equity/hestonmodel.cpp)을
-확인했다. 본 프로젝트의 비배당·ACT/365F 입력으로 별도 검증한다.
+- [AnalyticHestonEngine 선언](https://github.com/lballabio/QuantLib/blob/master/ql/pricingengines/vanilla/analytichestonengine.hpp): 적분 설정
+- [Heston 테스트](https://github.com/lballabio/QuantLib/blob/master/test-suite/hestonmodel.cpp): `testAnalyticVsBlack`의 일정분산 극한 검증
+- [HestonModel 구현](https://github.com/lballabio/QuantLib/blob/master/ql/models/equity/hestonmodel.cpp): 파라미터 순서 `theta, kappa, xi, rho, v0`

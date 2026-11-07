@@ -1,4 +1,4 @@
-"""Independent regressions for provenance, terminal sealing and lease fencing."""
+"""Run provenance, terminal sealing and lease fencing checks."""
 
 import copy
 import importlib.metadata
@@ -22,11 +22,11 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def review_run(django_user_model):
-    owner = django_user_model.objects.create_user(username="independent-review-owner")
-    payload = json.loads((settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text())
-    inputs = create_inputs(owner, "Independent review", payload)
-    return create_run(owner, inputs, "REFERENCE", "independent-review")[0]
+def valuation_run(django_user_model):
+    owner = django_user_model.objects.create_user(username="integrity-owner")
+    payload = json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text())
+    inputs = create_inputs(owner, "Run integrity", payload)
+    return create_run(owner, inputs, "REFERENCE", "integrity-run")[0]
 
 
 def _cells(chunk):
@@ -50,17 +50,17 @@ def _finish(run, monkeypatch):
     assert run.status == "COMPLETED"
 
 
-def test_worker_rejects_a_different_pinned_runtime(review_run, monkeypatch):
+def test_worker_rejects_a_different_pinned_runtime(valuation_run, monkeypatch):
     actual_version = importlib.metadata.version
 
     def different_quantlib(package):
         return "incompatible-test-version" if package == "QuantLib" else actual_version(package)
 
     monkeypatch.setattr(importlib.metadata, "version", different_quantlib)
-    monkeypatch.setattr(worker, "code_version", lambda: review_run.provenance["code_version"])
-    chunk = review_run.chunks.first()
+    monkeypatch.setattr(worker, "code_version", lambda: valuation_run.provenance["code_version"])
+    chunk = valuation_run.chunks.first()
     assert worker.execute_chunk(chunk.pk)
-    results = list(review_run.results.all())
+    results = list(valuation_run.results.all())
     assert results and all(result.status == "FAILED" for result in results)
     assert all("software" in result.error.lower() for result in results)
     assert all(result.reference_price is None for result in results)
@@ -69,10 +69,10 @@ def test_worker_rejects_a_different_pinned_runtime(review_run, monkeypatch):
 @pytest.mark.parametrize(
     "mismatch", ["input_hash", "component_hash", "version_id", "scenarios", "base_index"]
 )
-def test_worker_checks_run_pins_against_snapshot_records(review_run, mismatch, monkeypatch):
+def test_worker_checks_run_pins_against_snapshot_records(valuation_run, mismatch, monkeypatch):
     # Fault-inject a bad pin at initial insertion. No UPDATE bypass is needed,
     # and each underlying immutable snapshot remains individually valid.
-    provenance = copy.deepcopy(review_run.provenance)
+    provenance = copy.deepcopy(valuation_run.provenance)
     if mismatch == "input_hash":
         provenance["input_hash"] = "0" * 64
     elif mismatch == "component_hash":
@@ -84,11 +84,11 @@ def test_worker_checks_run_pins_against_snapshot_records(review_run, mismatch, m
     else:
         provenance["base_scenario_index"] = 1
     invalid = ValuationRun.objects.create(
-        owner=review_run.owner,
-        inputs=review_run.inputs,
-        mode=review_run.mode,
+        owner=valuation_run.owner,
+        inputs=valuation_run.inputs,
+        mode=valuation_run.mode,
         idempotency_key=f"bad-pin-{mismatch}",
-        request_hash=review_run.request_hash,
+        request_hash=valuation_run.request_hash,
         provenance=provenance,
     )
     chunk = RunChunk.objects.create(run=invalid, scenario_index=0)
@@ -99,13 +99,13 @@ def test_worker_checks_run_pins_against_snapshot_records(review_run, mismatch, m
     assert all(result.reference_price is None and result.error for result in results)
 
 
-def test_completed_result_set_rejects_an_extra_row(review_run, monkeypatch):
-    _finish(review_run, monkeypatch)
-    chunk = review_run.chunks.first()
-    previous_count = review_run.results.count()
+def test_completed_result_set_rejects_an_extra_row(valuation_run, monkeypatch):
+    _finish(valuation_run, monkeypatch)
+    chunk = valuation_run.chunks.first()
+    previous_count = valuation_run.results.count()
     with pytest.raises((ValidationError, DatabaseError)), transaction.atomic():
         ValuationResult.objects.create(
-            run=review_run,
+            run=valuation_run,
             chunk=chunk,
             scenario_index=chunk.scenario_index,
             position_index=999,
@@ -113,17 +113,17 @@ def test_completed_result_set_rejects_an_extra_row(review_run, monkeypatch):
             reference_price=10,
             reference_value=10,
         )
-    assert review_run.results.count() == previous_count
+    assert valuation_run.results.count() == previous_count
 
 
-def test_result_cannot_claim_a_chunk_from_a_different_run(review_run):
-    another, _ = create_run(review_run.owner, review_run.inputs, "REFERENCE", "another-run")
-    own_chunk, other_chunk = review_run.chunks.first(), another.chunks.first()
+def test_result_cannot_claim_a_chunk_from_a_different_run(valuation_run):
+    another, _ = create_run(valuation_run.owner, valuation_run.inputs, "REFERENCE", "another-run")
+    own_chunk, other_chunk = valuation_run.chunks.first(), another.chunks.first()
     assert worker._claim(own_chunk.pk)
     assert worker._claim(other_chunk.pk)
     with pytest.raises((ValidationError, DatabaseError)), transaction.atomic():
         ValuationResult.objects.create(
-            run=review_run,
+            run=valuation_run,
             chunk=other_chunk,
             scenario_index=other_chunk.scenario_index,
             position_index=0,
@@ -131,22 +131,22 @@ def test_result_cannot_claim_a_chunk_from_a_different_run(review_run):
             reference_price=10,
             reference_value=10,
         )
-    assert review_run.results.count() == another.results.count() == 0
+    assert valuation_run.results.count() == another.results.count() == 0
 
 
-def test_completed_run_rejects_an_extra_chunk(review_run, monkeypatch):
-    _finish(review_run, monkeypatch)
-    previous_count = review_run.chunks.count()
+def test_completed_run_rejects_an_extra_chunk(valuation_run, monkeypatch):
+    _finish(valuation_run, monkeypatch)
+    previous_count = valuation_run.chunks.count()
     with pytest.raises((ValidationError, DatabaseError)), transaction.atomic():
-        RunChunk.objects.create(run=review_run, scenario_index=999)
-    assert review_run.chunks.count() == previous_count
+        RunChunk.objects.create(run=valuation_run, scenario_index=999)
+    assert valuation_run.chunks.count() == previous_count
 
 
-def test_postgres_raw_insert_cannot_append_to_completed_results(review_run, monkeypatch):
+def test_postgres_raw_insert_cannot_append_to_completed_results(valuation_run, monkeypatch):
     if connection.vendor != "postgresql":
         pytest.skip("PostgreSQL trigger, not ORM-only validation")
-    _finish(review_run, monkeypatch)
-    existing = review_run.results.first()
+    _finish(valuation_run, monkeypatch)
+    existing = valuation_run.results.first()
     with pytest.raises(DatabaseError), transaction.atomic(), connection.cursor() as cursor:
         cursor.execute(
             """
@@ -163,19 +163,19 @@ def test_postgres_raw_insert_cannot_append_to_completed_results(review_run, monk
         )
 
 
-def test_expired_current_attempt_is_fenced_even_before_recovery(review_run):
-    chunk = review_run.chunks.select_related("run__inputs").first()
+def test_expired_current_attempt_is_fenced_even_before_recovery(valuation_run):
+    chunk = valuation_run.chunks.select_related("run__inputs").first()
     token = worker._claim(chunk.pk)
     RunChunk.objects.filter(pk=chunk.pk).update(lease_until=timezone.now() - timedelta(seconds=1))
     assert worker._finalize(chunk.pk, token, _cells(chunk)) is False
-    assert review_run.results.count() == 0
+    assert valuation_run.results.count() == 0
 
 
 @pytest.mark.django_db(transaction=True)
-def test_postgres_result_insert_serializes_with_run_sealing(review_run):
+def test_postgres_result_insert_serializes_with_run_sealing(valuation_run):
     if connection.vendor != "postgresql":
         pytest.skip("Requires PostgreSQL transaction isolation and real row locks")
-    chunk = review_run.chunks.first()
+    chunk = valuation_run.chunks.first()
     assert worker._claim(chunk.pk)
     attempted = Event()
 
@@ -184,7 +184,7 @@ def test_postgres_result_insert_serializes_with_run_sealing(review_run):
         try:
             attempted.set()
             ValuationResult.objects.create(
-                run_id=review_run.pk,
+                run_id=valuation_run.pk,
                 chunk_id=chunk.pk,
                 scenario_index=chunk.scenario_index,
                 position_index=0,
@@ -201,7 +201,7 @@ def test_postgres_result_insert_serializes_with_run_sealing(review_run):
     pool = ThreadPoolExecutor(max_workers=1)
     try:
         with transaction.atomic():
-            sealing = ValuationRun.objects.select_for_update().get(pk=review_run.pk)
+            sealing = ValuationRun.objects.select_for_update().get(pk=valuation_run.pk)
             sealing.status = "COMPLETED"
             sealing.completed_at = timezone.now()
             sealing.save(update_fields=["status", "completed_at"])
@@ -212,10 +212,10 @@ def test_postgres_result_insert_serializes_with_run_sealing(review_run):
         assert future.result(timeout=10) == "rejected"
     finally:
         pool.shutdown(wait=True)
-    assert review_run.results.count() == 0
+    assert valuation_run.results.count() == 0
 
 
-def test_stale_outbox_dispatcher_cannot_acknowledge_a_newer_lease(review_run):
+def test_stale_outbox_dispatcher_cannot_acknowledge_a_newer_lease(valuation_run):
     stolen = []
 
     def steal_lease_during_publish(chunk_id):

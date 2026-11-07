@@ -2,7 +2,7 @@
 
 현재 지원 범위는 배당 없는 합성 지수 `SYNTH_INDEX`, 통화 `USD`, 유럽형 현금결제
 콜/풋이다. q = 0은 고정 가정이므로 입력에서 배당·행사 방식·다른 통화를 받지 않는다.
-외부 JSON 스키마는 `examples/stage1_inputs.json`으로 확인할 수 있다.
+외부 JSON 스키마는 `examples/demo_inputs.json`으로 확인할 수 있다.
 
 ## 계약과 포지션
 

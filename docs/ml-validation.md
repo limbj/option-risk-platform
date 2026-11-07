@@ -1,8 +1,7 @@
-# Heston 가격 surrogate 검증 기록
+# Heston 가격 근사 모델 검증
 
-2026-11-08(KST)에 CPU에서 실제 데이터 생성·학습·독립 검증을 실행했다.
-`artifacts/demo`의 결과는 **COMPARE 전용**이다. 가격·민감도·공식 stress P&L의 기준은
-QuantLib reference이며, 아래 검증 통과가 ML을 공식 위험 계산 엔진으로 승격시키지는 않는다.
+2026-11-08(KST), CPU에서 생성·학습·평가한 `artifacts/demo`의 검증 결과다.
+이 모델은 **COMPARE 전용**이며 가격·민감도·stress P&L의 기준은 QuantLib reference다.
 
 ## 구현과 재현
 
@@ -18,7 +17,7 @@ uv run --locked --extra ml pytest tests/ml
 
 기존 dataset/artifact 경로를 덮어쓰지 않는다. `data/`, `artifacts/`는 Git에서 제외한다.
 Gate 실패 시 train/evaluate CLI는 실패 report와 manifest를 보존하고 종료코드 2를 반환하므로,
-bootstrap/CI에서 실패한 검증 다음의 등록 단계로 진행하지 않아야 한다.
+해당 학습·평가를 호출한 bootstrap과 CI는 등록 전에 중단된다.
 `load_artifact(directory)`는 manifest와 validation report를 읽고 SHA-256을 확인한 뒤
 `torch.load(..., weights_only=True, map_location="cpu")`로 가중치를 읽는다.
 `Surrogate.price(contract, market, spec)` 및 `price_many(cases, spec)`가 가격을 반환한다.
@@ -95,8 +94,7 @@ K=$100일 때 전체 평균 절대오차는 $0.05258, 최대는 $0.75194다.
 | OOD/model mismatch 거부 | 5/5 |
 | 정규화 parity residual | < 1e−12 |
 
-성능은 수치를 보고하는 항목이며 최소 속도향상을 요구하지 않는다.
-가격 정확도 gate와 성능을 함께 제시하고, 같은 정확도의 두 방법이라고 주장하지 않는다.
+성능은 보고 항목이며 최소 속도향상은 gate에 포함하지 않는다.
 
 ## 동등 workload 벤치마크
 

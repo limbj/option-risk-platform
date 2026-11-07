@@ -75,7 +75,7 @@ def test_mutating_raw_input_cannot_change_an_existing_bundle(payload):
 
 
 def test_checked_in_sample_is_valid_and_contains_both_position_sides():
-    sample_path = Path(__file__).resolve().parents[2] / "examples" / "stage1_inputs.json"
+    sample_path = Path(__file__).resolve().parents[2] / "examples" / "demo_inputs.json"
     bundle = parse_inputs(json.loads(sample_path.read_text(encoding="utf-8")))
     assert {position.side for position in bundle.positions} == {Side.LONG, Side.SHORT}
     assert any(

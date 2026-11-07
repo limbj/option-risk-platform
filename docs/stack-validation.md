@@ -1,8 +1,7 @@
-# 실제 Docker stack 검증
+# 서비스 통합·복구 검증
 
-`scripts/verify_stack.py`는 Django 테스트 클라이언트를 사용하지 않고 실제 HTTP endpoint를
-호출한다. PostgreSQL에 저장된 입력·run, durable outbox, Redis, Celery worker와 ML artifact를
-거친 결과를 확인한다. Python 표준 라이브러리만 사용한다.
+`scripts/verify_stack.py`는 실행 중인 Docker 서비스의 HTTP API를 호출해 PostgreSQL 입력·실행,
+outbox, Redis, Celery worker와 ML artifact를 거친 결과를 검사한다. Python 표준 라이브러리만 사용한다.
 
 ## 실행
 
@@ -17,7 +16,7 @@ uv run --locked --extra ml --env-file .env python scripts/verify_stack.py
 `STACK_SECOND_USERNAME`, `STACK_SECOND_PASSWORD`를 환경에 넣어 소유권 검증도 수행한다.
 두 번째 계정이 없으면 그 항목은 `not_run_no_second_account_credentials`로 명시한다.
 
-프로젝트 dispatcher를 잠시 멈추는 실제 outbox 복구 검증은 명시적으로 실행한다:
+Dispatcher 중단 후 outbox 복구 검사:
 
 ```powershell
 uv run --locked --extra ml --env-file .env python scripts/verify_stack.py --recovery-dispatcher
@@ -39,15 +38,15 @@ uv run --locked --extra ml --env-file .env python scripts/verify_stack.py --reco
 - ML OOD를 이유와 함께 보존하고 reference를 유지하며 ML 합계/P&L을 null로 반환
 - JSON/CSV export의 셀·provenance·완전성, 재실행의 원본 보존과 가격 재현
 - 선택적 두 번째 계정의 타인 입력/run/export/retry 접근 거부
-- 선택적 실제 dispatcher 중단 후 durable outbox 재개
+- 선택적 dispatcher 중단 후 durable outbox 재개
 
 각 run은 기본 60초까지 기다린다. `--timeout`으로 조절할 수 있다.
 기계 판독 결과는 Git에서 제외된 `work/stack-validation.json`에 기록된다.
 HTTP POST 시간, 서버의 생성→완료 시간, polling을 포함한 wall time, worker 셀별 reference/ML
 계산 시간을 구분한다. 작은 표본의 통합 검증이며 처리량 benchmark나 속도향상 주장이 아니다.
 
-실제 worker 손실/lease 복구를 별도로 검증하는 명령은 다음과 같다. 이 명령은 로컬 검증용이며,
-다른 사용자가 계산 중인 stack에서는 실행하지 않는다.
+Worker 손실과 lease 복구는 별도 명령으로 검사한다. 이 명령은 worker를 강제 종료하므로
+다른 계산이 없는 로컬 환경에서 실행한다.
 
 ```powershell
 uv run --locked --extra ml --env-file .env python scripts/verify_worker_recovery.py --timeout 420
@@ -62,11 +61,9 @@ uv run --locked --extra ml --env-file .env python scripts/verify_worker_recovery
 
 ## 실행 결과
 
-2026-11-08 02:01 KST, `http://127.0.0.1:8000`의 실제 Linux container stack에서
-두 사용자 계정과 `--recovery-dispatcher`를 포함하여 재검증했다.
-**19개 검사·6개 run이 모두 통과**했고, 전체 실행시간은 20.24초였다.
-API·PostgreSQL·Redis·prefork Celery worker·dispatcher가
-실제로 동작했으며, 마지막에 모든 서비스가 running임을 확인했다.
+2026-11-08 02:01 KST, `http://127.0.0.1:8000`의 Linux container 환경에서
+두 사용자 계정과 `--recovery-dispatcher`를 포함한 **19개 검사·6개 실행이 통과**했다.
+전체 실행시간은 20.24초였으며 종료 시 모든 서비스가 running 상태였다.
 
 | Run | 셀 수 | POST 202 | 서버 생성→완료 | 제출→완료 polling wall |
 | --- | ---: | ---: | ---: | ---: |
@@ -77,27 +74,23 @@ API·PostgreSQL·Redis·prefork Celery worker·dispatcher가
 | ML 범위 밖·reference 유지 | 4 | 51.83 ms | 1.729 s | 2.033 s |
 | Dispatcher 중단 후 복구 | 4 | 61.62 ms | 4.022 s | 4.199 s |
 
-이번 COMPARE의 ML 셀 계산 시간은 약 0.18~0.79ms였다.
+COMPARE의 ML 셀 계산 시간은 약 0.18~0.79ms였다.
 Reference base 셀에는 bump/reprice 민감도 계산도 포함된다. Artifact 로딩·처음 라이브러리
 import·dispatcher 주기·DB/queue 대기 비용 때문에 per-cell 계산 시간의 합은 end-to-end
 시간과 같지 않다. 최초 요청과 이후 warm 요청을 같은 성능 수치로 비교하지 않는다.
 
-Dispatcher 중단 중 새 run의 202 접수·DB 보존·QUEUED·빈 결과·null 총계/P&L을 확인했다.
-재시작 이후 모든 required cell이 정확히 한 번씩 보고되고 합계가 완성됐다.
-이는 실제 durable outbox 재개 검증이다.
+Dispatcher 중단 중 새 run은 HTTP 202로 접수되어 DB의 QUEUED 상태로 유지됐다.
+결과는 비어 있고 총계·P&L은 null이었다. 재시작 후 모든 필수 셀이 중복 없이 저장되고 합계가 완성됐다.
 
-별도 두 번째 사용자 세션에서 타인의 입력·run·export 조회 및 입력 실행·run 재시도가
-모두 HTTP 404로 거부됨을 확인했다. Local demo 자동 진입 설정 아래에서도 명시적으로
-로그인한 두 번째 사용자의 세션과 리소스 소유권이 보존됐다.
-상세 ID·각 셀 timing·pinned provenance·총계는 `work/stack-final-validation.json`에 남아 있다.
-01:45 KST의 첫 실행(18개 검사, 소유권 미실행) 기록은 `work/stack-validation.json`이다.
+두 번째 사용자 세션의 타인 입력·run·export 조회 및 입력 실행·run 재시도는 모두 HTTP 404로 거부됐다.
+로컬 자동 진입 모드에서도 명시적으로 로그인한 사용자의 세션과 소유권이 보존됐다.
+실행 ID, 셀별 시간, provenance, 총계는 로컬 `work/stack-final-validation.json`에 기록했다.
 
-### 실제 SIGKILL 및 lease 복구
+### SIGKILL 및 lease 복구
 
 2026-11-08 01:55:13 KST에 별도 `verify_worker_recovery.py` 실험에서 worker container를
 SIGKILL로 종료하고 즉시 재시작했다. 이때 계산 중이던 scenario 6·7의 lease가 남아 있었다.
-계산이 끝난 9,800개 셀은 그대로 유지됐고, 288.7초 관측까지 이 두 chunk의 attempts는 1이었다.
-기존 lease가 유효한 동안 중복 실행을 막는 동작을 실제 DB 상태로 확인했다.
+계산이 끝난 9,800개 셀은 유지됐고, 288.7초 관측까지 두 chunk의 attempts는 1이었다.
 
 300초 lease가 자연 만료된 후 dispatcher가 작업을 다시 발행했다. 서버에서는 run 생성 후
 **301.819708초**에 완료됐으며, 20초 polling의 다음 관측인 중단 후 309.1초에 완료를 확인했다.
@@ -113,16 +106,13 @@ SIGKILL로 종료하고 즉시 재시작했다. 이때 계산 중이던 scenario
 | 실패값을 대신한 0 | 없음; 구성한 양의 가격 입력의 모든 reference price > 0 |
 | 최종 상태 | 모든 chunk와 run COMPLETED; worker를 포함한 모든 서비스 running |
 
-Run ID는 `899acb1d-deca-4980-ba1b-945d41c6542f`이며, 상세 read-only DB snapshot과
-20초 간격의 진행 기록은 `work/worker-recovery.json`에 있다.
-API·worker·dispatcher의 image ID가 동일함을 실험 전에 검사했다.
+Run ID는 `899acb1d-deca-4980-ba1b-945d41c6542f`이며, DB snapshot과 20초 간격의
+진행 기록은 로컬 `work/worker-recovery.json`에 있다. API·worker·dispatcher는 같은 이미지를 사용했다.
 
 - Image ID: `5df9ab195e43a8481c6e2c9e88d4a99c2bfedc9193eaa9da27e45d970018d3d0`
 - Run source SHA-256: `e065bb6aab7f0d702580d4722b3e9d277bc3db0b61fa559e339fbc055aa8a7ed`
 
-이 실험은 실제 프로세스 손실·자연 lease 만료·재처리·최종 결과 완전성을 검증한다.
-추가적인 중복 메시지·오래된 attempt token·저장 이후 재호출·최대 재시도 실패 경로는
-별도의 worker 회귀 테스트와 함께 평가한다.
+중복 메시지, 오래된 attempt token, 저장 이후 재호출, 최대 재시도 실패는 별도의 worker 회귀 테스트로 검사한다.
 
 ### API 주소 변경 후 nginx 자동 복구
 
@@ -132,7 +122,6 @@ web container 재시작 없이 일시적인 연결 실패 후 **3.54초에** ngi
 `/api/session/`이 HTTP 200과 인증된 demo session을 반환했다.
 `finally`에서 원래 주소로 복원했고 같은 endpoint가 **3.55초에** 다시 HTTP 200으로 회복됐다.
 
-web·API container의 ID와 StartedAt은 시험 전후 동일했다. DB 삭제나 다른 서비스 중단은
-수행하지 않았다. 이는 Docker DNS를 5초 주기로 갱신하는 nginx upstream 설정이 실제 주소
-변경을 따라가는지 확인한 결과이며, 전환 중 무중단을 보장한다는 뜻은 아니다.
-관측 기록은 `work/nginx-dns-validation.json`에 보존했다.
+web·API container의 ID와 StartedAt은 시험 전후 동일했다. Docker DNS를 5초 주기로 갱신하는
+nginx upstream이 주소 변경을 반영했으며 전환 중에는 일시적인 연결 실패가 있었다.
+관측 기록은 로컬 `work/nginx-dns-validation.json`에 보존했다.

@@ -1,4 +1,4 @@
-"""Build and start the local MVP with generated, untracked development secrets."""
+"""Build and start the local application with generated, untracked development secrets."""
 
 import argparse
 import os

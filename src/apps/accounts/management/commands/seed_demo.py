@@ -26,8 +26,6 @@ class Command(BaseCommand):
             user.set_password(password)
             user.save(update_fields=["password"])
         if not InputVersion.objects.filter(owner=user).exists():
-            payload = json.loads(
-                (settings.BASE_DIR / "examples" / "stage1_inputs.json").read_text()
-            )
+            payload = json.loads((settings.BASE_DIR / "examples" / "demo_inputs.json").read_text())
             create_inputs(user, "Synthetic European options demo", payload)
         self.stdout.write("Demo account and synthetic input version are available.")

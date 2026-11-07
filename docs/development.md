@@ -91,7 +91,7 @@ uv run --locked --extra ml --env-file .env python scripts/verify_stack.py
 ```
 
 복구 검사는 이 프로젝트의 dispatcher 또는 worker를 일시 중단하므로 다른 계산이 없는 로컬 환경에서 실행한다.
-동작과 증거 형식은 [실제 실행·복구 기록](stack-validation.md)에 설명되어 있다.
+검사 항목과 결과 형식은 [서비스 통합·복구 검증](stack-validation.md)에 설명되어 있다.
 
 ```powershell
 uv run --locked --extra ml --env-file .env python scripts/verify_stack.py --recovery-dispatcher
@@ -115,5 +115,5 @@ docker compose ps
 docker compose logs --tail 50 api worker dispatcher
 ```
 
-서비스별 포트와 복구 명령은 [로컬 운영 가이드](deployment.md),
+서비스별 포트와 복구 명령은 [로컬 운영 가이드](local-operations.md),
 원격 검사 순서와 보고서는 [CI 검증](ci-validation.md)을 참고한다.
