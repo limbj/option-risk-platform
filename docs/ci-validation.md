@@ -3,9 +3,9 @@
 `.github/workflows/ci.yml`의 `MVP acceptance`는 push, pull request, 수동 실행에서
 단일 Ubuntu job을 수행한다.
 
-2026-11-08 02:32(KST), commit `1a427bcd9351ecd46fae090a357c4a857d9f76ba`의
-[GitHub Actions 실행 42396323463](https://github.com/limbj/option-risk-platform/actions/runs/42396323463)이
-**성공**했다. 전체 job 소요 시간은 5분 33초였다.
+2026-11-08 02:42(KST), commit `bd6863d35fe89096a4bd9ba595b3a3da71637cc3`의
+[GitHub Actions 실행 42397207266](https://github.com/limbj/option-risk-platform/actions/runs/42397207266)이
+**성공**했다. 전체 job 소요 시간은 5분 3초였다.
 
 | 검사 | 원격 결과 |
 | --- | --- |
@@ -19,7 +19,7 @@
 | Playwright 브라우저·모바일 workflow | 1 passed; 1440/1024/390 화면·키보드 표·모델 버전 선택 포함 |
 
 JUnit·로그·ML 검증 report·UI 스크린샷은
-[실행 증거 artifact](https://github.com/limbj/option-risk-platform/actions/runs/42396323463/artifacts/13582789394)에
+[실행 증거 artifact](https://github.com/limbj/option-risk-platform/actions/runs/42397207266/artifacts/13584172013)에
 보존된다(14일 보존 정책).
 
 ## 실행 순서

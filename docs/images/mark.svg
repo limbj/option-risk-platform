@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none">
+  <title>Option Risk</title>
+  <rect width="80" height="80" rx="14" fill="#202830"/>
+  <path d="M20 17v46h43" stroke="#92ACFF" stroke-width="2" opacity=".35"/>
+  <path d="M20 55h20l23-29" stroke="#92ACFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
