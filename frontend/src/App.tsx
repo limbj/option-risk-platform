@@ -42,6 +42,33 @@ type Session = {
   localDemoMode?: boolean;
 };
 
+function BrandMark() {
+  return (
+    <svg
+      className="brand-mark"
+      width="30"
+      height="30"
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 5v22h23"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        opacity="0.35"
+      />
+      <path
+        d="M5 23h11L28 9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function NumberField({
   label,
   value,
@@ -57,6 +84,7 @@ function NumberField({
     <label>
       {label}
       <input
+        className="numeric-input"
         type="number"
         required
         step={step}
@@ -78,6 +106,7 @@ export default function App() {
   const [selectedRun, setSelectedRun] = useState<string>();
   const [mode, setMode] = useState("REFERENCE");
   const [artifactId, setArtifactId] = useState("");
+  const [selectedReportId, setSelectedReportId] = useState("");
   const [notice, setNotice] = useState("");
   const session = useQuery({
     queryKey: ["session"],
@@ -127,6 +156,9 @@ export default function App() {
     queryFn: () => api<{ items: Artifact[] }>("models/"),
     enabled: loggedIn,
   });
+  const reportArtifact =
+    artifacts.data?.items.find((item) => item.id === selectedReportId) ??
+    artifacts.data?.items[0];
   const edit = (next: Inputs) => {
     setInputs(next);
     setSaved(undefined);
@@ -199,27 +231,23 @@ export default function App() {
       <main className="login-shell">
         <section className="login-story">
           <div className="brand">
-            <span className="brand-mark">∂</span> OPTION RISK
+            <BrandMark />
+            <span>
+              OPTION <b>RISK</b>
+            </span>
           </div>
           <div>
-            <p className="eyebrow">PORTFOLIO LAB / 01</p>
-            <h1>
-              가격의 변화에서
-              <br />
-              리스크를 읽다.
-            </h1>
+            <h1>옵션 포트폴리오 평가</h1>
             <p>
-              고정된 입력, 재현 가능한 평가.
-              <br />
-              Heston 기준 모델과 ML 가격을 같은 조건에서 비교합니다.
+              포지션과 시장 입력을 저장하고 가격·민감도·스트레스 손익을
+              확인합니다.
             </p>
           </div>
-          <span className="fine">SYNTHETIC INDEX · EUROPEAN OPTIONS · USD</span>
+          <span className="fine">유럽형 옵션 · USD · ACT/365F</span>
         </section>
         <section className="login-card">
-          <p className="eyebrow">WORKSPACE ACCESS</p>
-          <h2>포트폴리오 실험실</h2>
-          <p className="muted">로컬 데모 계정으로 로그인하세요.</p>
+          <h2>작업공간 로그인</h2>
+          <p className="muted">사용자 이름과 비밀번호를 입력하세요.</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -252,7 +280,7 @@ export default function App() {
               className="primary"
               disabled={!session.data || login.isPending}
             >
-              실험실 열기 <span>↗</span>
+              실험실 열기
             </button>
             {(login.error || session.error) && (
               <p role="alert" className="error">
@@ -261,7 +289,7 @@ export default function App() {
             )}
           </form>
           <p className="fine muted">
-            합성 데이터로 금융 모델을 검증하는 연구용 데모입니다.
+            합성 지수의 옵션을 고정된 Heston 모형으로 평가합니다.
           </p>
         </section>
       </main>
@@ -269,7 +297,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <aside>
+      <aside className="workspace-bar">
         <a
           className="brand"
           href="#"
@@ -278,86 +306,65 @@ export default function App() {
             setTab("포지션");
           }}
         >
-          <span className="brand-mark">∂</span>
+          <BrandMark />
           <span>
-            OPTION
-            <br />
-            <b>RISK</b>
+            OPTION <b>RISK</b>
           </span>
         </a>
-        <div className="workspace-label">PORTFOLIO LAB</div>
-        <nav>
-          {tabs.map((item, i) => (
+        <nav className="workspace-nav" aria-label="주요 화면">
+          {tabs.map((item) => (
             <button
               key={item}
               className={tab === item ? "active" : ""}
+              aria-current={tab === item ? "page" : undefined}
               onClick={() => setTab(item)}
             >
-              <span className="nav-number">0{i + 1}</span>
               {item}
-              <span className="nav-arrow">↗</span>
             </button>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <span className="live-dot" /> SYNTHETIC ENVIRONMENT
-          <p>
-            하나의 지수, 고정된 가정.
-            <br />
-            모든 결과에 입력과 모델을 기록합니다.
-          </p>
+        <div className="workspace-context">
+          {session.data?.localDemoMode ? (
+            <div className="logout">로컬 작업공간 · 자동 진입</div>
+          ) : (
+            <button
+              className="logout"
+              onClick={async () => {
+                await api("logout/", {});
+                setInputs(undefined);
+                setSaved(undefined);
+                setSelectedRun(undefined);
+                client.clear();
+                client.invalidateQueries();
+              }}
+            >
+              로그아웃 · {session.data?.user?.username}
+            </button>
+          )}
         </div>
-        {session.data?.localDemoMode ? (
-          <div className="logout">로컬 작업공간 · 자동 진입</div>
-        ) : (
-          <button
-            className="logout"
-            onClick={async () => {
-              await api("logout/", {});
-              setInputs(undefined);
-              setSaved(undefined);
-              setSelectedRun(undefined);
-              client.clear();
-              client.invalidateQueries();
-            }}
-          >
-            로그아웃 · {session.data?.user?.username}
-          </button>
-        )}
       </aside>
       <main className="main">
-        <header>
-          <div className="breadcrumb">
-            WORKSPACE <span>/</span> {tab}
-          </div>
-          <span className="pill neutral">REFERENCE FIRST</span>
-        </header>
         <section className="page-heading">
           <div>
-            <p className="eyebrow">OPTION VALUATION & STRESS TESTING</p>
             <h1>
               {tab === "포지션"
                 ? "포트폴리오 구성"
                 : tab === "시장 · 시나리오"
-                  ? "변화의 조건을 설정하세요."
+                  ? "시장 · 시나리오"
                   : tab === "평가 · 실행 이력"
-                    ? "평가 결과와 실행 이력"
-                    : "기준 모델과 ML의 거리"}
+                    ? "평가 결과"
+                    : "모델 검증"}
             </h1>
             <p className="muted">
               {tab === "포지션"
-                ? "계약을 입력하고, 재현 가능한 포트폴리오 버전으로 저장하세요."
+                ? "옵션 계약을 입력하고 평가에 사용할 버전을 저장합니다."
                 : tab === "시장 · 시나리오"
-                  ? "동일한 평가일에서 현물·초기 변동성·금리 충격을 적용합니다."
+                  ? "평가일을 고정하고 현물·초기 변동성·금리 충격을 설정합니다."
                   : tab === "평가 · 실행 이력"
-                    ? "완료된 결과만 합산합니다. 실패한 셀은 사유와 함께 남습니다."
-                    : "ML은 비교용입니다. 공식 평가와 민감도는 Heston 기준 엔진을 사용합니다."}
+                    ? "실행별 가격과 손익을 확인합니다. 불완전한 결과는 합산하지 않습니다."
+                    : "ML 가격의 오차와 지원 범위를 확인합니다. 기준 평가와 민감도는 Heston 엔진을 사용합니다."}
             </p>
           </div>
-          <span className="page-index">
-            0{tabs.indexOf(tab) + 1}
-            <small> / 04</small>
-          </span>
         </section>
         {error && (
           <div className="error banner" role="alert">
@@ -371,36 +378,48 @@ export default function App() {
         )}
         {inputs && (tab === "포지션" || tab === "시장 · 시나리오") && (
           <>
-            <div className="stats">
+            <div className="stats" role="group" aria-label="입력 요약">
               <div>
-                <span>UNDERLYING</span>
+                <span>기초자산</span>
                 <strong>
-                  SYNTH_INDEX <em>USD</em>
+                  {inputs.market.underlying ?? "SYNTH_INDEX"}
+                  <em>{inputs.market.currency ?? "USD"}</em>
                 </strong>
               </div>
               <div>
-                <span>POSITIONS</span>
+                <span>평가일</span>
                 <strong>
-                  {inputs.positions.length.toString().padStart(2, "0")}
+                  <time dateTime={inputs.market.valuation_date}>
+                    {inputs.market.valuation_date || "—"}
+                  </time>
+                </strong>
+              </div>
+              <div>
+                <span>포지션</span>
+                <strong>
+                  {inputs.positions.length}
                   <em> / 100</em>
                 </strong>
               </div>
               <div>
-                <span>SCENARIOS</span>
+                <span>시나리오</span>
                 <strong>
-                  {inputs.scenarios.length.toString().padStart(2, "0")}
-                  <em>instantaneous</em>
+                  {inputs.scenarios.length}
+                  <em> / 100</em>
                 </strong>
               </div>
               <div>
-                <span>SNAPSHOT</span>
-                <strong className="stat-word">
-                  {saved ? "저장됨" : "편집 중"}
-                  <em>{saved ? saved.hash?.slice(0, 8) : "UNPUBLISHED"}</em>
+                <span>입력 버전</span>
+                <strong className={`stat-word ${saved ? "saved" : "unsaved"}`}>
+                  {saved ? "저장됨" : "미저장"}
+                  {saved && <em>{saved.hash?.slice(0, 8)}</em>}
                 </strong>
               </div>
             </div>
-            <section className="panel input-toolbar">
+            <section
+              className="panel input-toolbar"
+              aria-label="포트폴리오 버전"
+            >
               <label>
                 포트폴리오 이름
                 <input
@@ -442,7 +461,7 @@ export default function App() {
                   }
                 }}
               >
-                샘플 불러오기 ↺
+                샘플 불러오기
               </button>
             </section>
             {tab === "포지션" ? (
@@ -465,7 +484,7 @@ export default function App() {
                         )
                       }
                     >
-                      CSV 템플릿 ↓
+                      CSV 템플릿
                     </button>
                     <label className="file-button">
                       CSV 가져오기
@@ -492,17 +511,22 @@ export default function App() {
                     </label>
                   </div>
                 </div>
-                <div className="table-scroll">
+                <div
+                  className="table-scroll"
+                  role="region"
+                  aria-label="옵션 계약 표"
+                  tabIndex={0}
+                >
                   <table className="position-table">
                     <thead>
                       <tr>
                         <th>#</th>
                         <th>옵션 종류</th>
-                        <th>행사가</th>
+                        <th className="numeric">행사가</th>
                         <th>만기일</th>
                         <th>방향</th>
-                        <th>부호 있는 수량</th>
-                        <th>계약 승수</th>
+                        <th className="numeric">부호 있는 수량</th>
+                        <th className="numeric">계약 승수</th>
                         <th />
                       </tr>
                     </thead>
@@ -516,11 +540,15 @@ export default function App() {
                             ),
                           });
                         return (
-                          <tr key={index}>
+                          <tr
+                            key={index}
+                            data-side={position.side}
+                            data-option={position.contract.option_type}
+                          >
                             <td className="row-number">
                               {String(index + 1).padStart(2, "0")}
                             </td>
-                            <td>
+                            <td className="option-cell">
                               <select
                                 aria-label={`옵션 종류 ${index + 1}`}
                                 value={position.contract.option_type}
@@ -539,7 +567,7 @@ export default function App() {
                                 <option value="put">PUT</option>
                               </select>
                             </td>
-                            <td>
+                            <td className="numeric">
                               <input
                                 aria-label={`행사가 ${index + 1}`}
                                 type="number"
@@ -556,7 +584,7 @@ export default function App() {
                                 }
                               />
                             </td>
-                            <td>
+                            <td className="date-cell">
                               <input
                                 aria-label={`만기일 ${index + 1}`}
                                 type="date"
@@ -572,7 +600,7 @@ export default function App() {
                                 }
                               />
                             </td>
-                            <td>
+                            <td className="side-cell">
                               <select
                                 aria-label={`방향 ${index + 1}`}
                                 value={position.side}
@@ -590,7 +618,7 @@ export default function App() {
                                 <option value="short">SHORT −</option>
                               </select>
                             </td>
-                            <td>
+                            <td className="numeric">
                               <input
                                 aria-label={`수량 ${index + 1}`}
                                 type="number"
@@ -604,7 +632,7 @@ export default function App() {
                                 }
                               />
                             </td>
-                            <td>
+                            <td className="numeric">
                               <input
                                 aria-label={`승수 ${index + 1}`}
                                 type="number"
@@ -672,7 +700,7 @@ export default function App() {
                     className="text-button"
                     onClick={() => setTab("시장 · 시나리오")}
                   >
-                    시장 · 시나리오 설정 →
+                    시장 · 시나리오 설정
                   </button>
                 </div>
               </section>
@@ -682,9 +710,9 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <h2>시장 스냅샷</h2>
-                      <p>고정 평가일 · flat rate · q = 0</p>
+                      <p>고정 평가일 · 단일 금리 · 배당률 q = 0</p>
                     </div>
-                    <span className="pill neutral">MANUAL / SYNTHETIC</span>
+                    <span className="pill neutral">합성 시장 입력</span>
                   </div>
                   <div className="fields">
                     <label>
@@ -732,7 +760,7 @@ export default function App() {
                     />
                   </div>
                   <div className="model-strip">
-                    <b>HESTON PROFILE</b> κ {inputs.model.kappa}{" "}
+                    <b>고정 Heston 모형</b> κ {inputs.model.kappa}{" "}
                     <span>θ {inputs.model.theta}</span> ξ {inputs.model.xi}{" "}
                     <span>ρ {inputs.model.rho}</span>
                     <small>
@@ -783,14 +811,19 @@ export default function App() {
                       프리셋 적용
                     </button>
                   </div>
-                  <div className="table-scroll">
-                    <table>
+                  <div
+                    className="table-scroll"
+                    role="region"
+                    aria-label="스트레스 시나리오 표"
+                    tabIndex={0}
+                  >
+                    <table className="scenario-table">
                       <thead>
                         <tr>
                           <th>시나리오</th>
-                          <th>현물 · %</th>
-                          <th>초기 변동성 · %p</th>
-                          <th>금리 · bp</th>
+                          <th className="numeric">현물 · %</th>
+                          <th className="numeric">초기 변동성 · %p</th>
+                          <th className="numeric">금리 · bp</th>
                           <th />
                         </tr>
                       </thead>
@@ -824,7 +857,7 @@ export default function App() {
                                   "rate_shock_bp",
                                 ] as const
                               ).map((field) => (
-                                <td key={field}>
+                                <td key={field} className="numeric">
                                   <input
                                     aria-label={`${field} ${index + 1}`}
                                     type="number"
@@ -890,11 +923,11 @@ export default function App() {
             )}
             <section className="execution-bar">
               <div>
-                <span className="eyebrow">READY TO CALCULATE</span>
+                <h2 className="execution-title">평가 실행</h2>
                 <p>
                   {saved
                     ? "저장된 입력 버전을 사용합니다."
-                    : "입력 검증 후 불변 버전으로 저장하세요."}
+                    : "입력 버전을 저장한 뒤 실행할 수 있습니다."}
                 </p>
               </div>
               <div className="button-row">
@@ -936,7 +969,7 @@ export default function App() {
                     (mode === "COMPARE" && !artifactId)
                   }
                 >
-                  평가 실행 ↗
+                  평가 실행
                 </button>
               </div>
             </section>
@@ -948,11 +981,11 @@ export default function App() {
               <div className="panel-heading">
                 <h2>실행 이력</h2>
                 <button
-                  className="icon-button"
+                  className="text-button"
                   aria-label="실행 이력 새로고침"
                   onClick={() => runs.refetch()}
                 >
-                  ↻
+                  새로고침
                 </button>
               </div>
               {!runs.data?.items.length && (
@@ -966,6 +999,7 @@ export default function App() {
                 <button
                   className={`run-item ${selectedRun === item.id ? "selected" : ""}`}
                   key={item.id}
+                  aria-pressed={selectedRun === item.id}
                   onClick={() => setSelectedRun(item.id)}
                 >
                   <div>
@@ -995,7 +1029,7 @@ export default function App() {
                             {statusLabel[run.data.status] ?? run.data.status}
                           </span>
                         </h2>
-                        <p>
+                        <p className="run-identity">
                           {run.data.id} · {run.data.mode}
                         </p>
                       </div>
@@ -1005,14 +1039,14 @@ export default function App() {
                           href={`/api/runs/${run.data.id}/export/?format=json`}
                           download
                         >
-                          JSON ↓
+                          JSON 다운로드
                         </a>
                         <a
                           className="ghost"
                           href={`/api/runs/${run.data.id}/export/?format=csv`}
                           download
                         >
-                          CSV ↓
+                          CSV 다운로드
                         </a>
                         {!pending(run.data) && (
                           <button
@@ -1043,18 +1077,23 @@ export default function App() {
                     {run.data.error && (
                       <p className="error">{run.data.error}</p>
                     )}
-                    <div className="table-scroll">
-                      <table>
+                    <div
+                      className="table-scroll"
+                      role="region"
+                      aria-label="시나리오별 평가 결과 표"
+                      tabIndex={0}
+                    >
+                      <table className="totals-table">
                         <thead>
                           <tr>
                             <th>시나리오</th>
                             <th>완결성</th>
-                            <th>기준 가치 · USD</th>
-                            <th>스트레스 P&L</th>
+                            <th className="numeric">기준 가치 · USD</th>
+                            <th className="numeric">스트레스 P&L</th>
                             {run.data.mode === "COMPARE" && (
                               <>
-                                <th>ML P&L</th>
-                                <th>P&L 차이</th>
+                                <th className="numeric">ML P&L</th>
+                                <th className="numeric">P&L 차이</th>
                               </>
                             )}
                           </tr>
@@ -1109,18 +1148,25 @@ export default function App() {
                         </p>
                       </div>
                     </div>
-                    <div className="table-scroll">
-                      <table>
+                    <div
+                      className="table-scroll"
+                      role="region"
+                      aria-label="포지션별 평가 결과 표"
+                      tabIndex={0}
+                    >
+                      <table className="valuation-table">
                         <thead>
                           <tr>
                             <th>시나리오 / 포지션</th>
-                            <th>단위 가격</th>
-                            <th>포지션 가치</th>
-                            <th>Delta</th>
-                            <th>Gamma</th>
-                            <th>초기 변동성 민감도 / 1%p</th>
+                            <th className="numeric">단위 가격</th>
+                            <th className="numeric">포지션 가치</th>
+                            <th className="numeric">Delta</th>
+                            <th className="numeric">Gamma</th>
+                            <th className="numeric">
+                              초기 변동성 민감도 / 1%p
+                            </th>
                             {run.data.mode === "COMPARE" && (
-                              <th>ML 단위 가격 / 사유</th>
+                              <th className="numeric">ML 단위 가격 / 사유</th>
                             )}
                             <th>상태 / 사유</th>
                           </tr>
@@ -1133,7 +1179,7 @@ export default function App() {
                               <td>
                                 {cell.scenario_name}
                                 <small className="block">
-                                  POSITION {cell.position_index + 1}
+                                  포지션 {cell.position_index + 1}
                                 </small>
                               </td>
                               <td className="numeric">
@@ -1159,7 +1205,7 @@ export default function App() {
                                 )}
                               </td>
                               {run.data!.mode === "COMPARE" && (
-                                <td>
+                                <td className="numeric ml-result">
                                   {money(cell.ml_price, 4)}
                                   <small className="block">
                                     가격 차이 {money(cell.price_error, 4)}
@@ -1189,7 +1235,14 @@ export default function App() {
                                   )}
                                 </td>
                               )}
-                              <td>{cell.error || cell.status}</td>
+                              <td
+                                className={
+                                  cell.error ? "error" : "result-status"
+                                }
+                              >
+                                {cell.error ||
+                                  (statusLabel[cell.status] ?? cell.status)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1215,10 +1268,10 @@ export default function App() {
                 </>
               ) : (
                 <section className="panel empty">
-                  <span className="empty-symbol">∑</span>
-                  <h2>실행을 선택하세요.</h2>
+                  <h2>실행을 선택하세요</h2>
                   <p>
-                    왼쪽 이력에서 결과와 고정된 계산 출처를 확인할 수 있습니다.
+                    실행 이력에서 가격·민감도와 저장된 계산 출처를 확인할 수
+                    있습니다.
                   </p>
                 </section>
               )}
@@ -1229,20 +1282,15 @@ export default function App() {
           <>
             <section className="comparison-intro">
               <div>
-                <p className="eyebrow">REFERENCE × SURROGATE</p>
-                <h2>같은 조건, 두 개의 가격.</h2>
+                <h2>Heston 기준 모델과 MLP 비교</h2>
                 <p>
-                  Heston의 준해석적 가격을 학습한 MLP입니다.
-                  <br />
-                  입력 영역을 벗어나면 이유를 기록하고 기준 결과를 유지합니다.
+                  Heston의 준해석적 가격으로 학습합니다. 지원 영역 밖에서는 ML
+                  결과 대신 사유를 표시하고 기준 가격을 유지합니다.
                 </p>
               </div>
-              <div className="flow">
-                <span>log(S/K) · T · r · σ₀</span>
-                <b>→</b>
-                <span>MLP</span>
-                <b>→</b>
-                <span>C / K</span>
+              <div className="flow" aria-label="ML 입력과 출력">
+                <span>입력: log(S/K) · T · r · σ₀</span>
+                <span>출력: C / K</span>
               </div>
             </section>
             {!artifacts.data?.items.length && (
@@ -1254,35 +1302,54 @@ export default function App() {
                 </p>
               </section>
             )}
-            {artifacts.data?.items.map((item) => (
-              <section className="panel" key={item.id}>
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">VALIDATED ARTIFACT</p>
-                    <h2>{item.name ?? "Pricing surrogate"}</h2>
-                    <p>{item.id}</p>
-                  </div>
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setArtifactId(item.id);
-                      setMode("COMPARE");
-                      setTab("시장 · 시나리오");
-                    }}
-                  >
-                    이 모델로 비교 ↗
-                  </button>
+            {reportArtifact && (
+              <>
+                <div className="report-toolbar">
+                  <label>
+                    검증 보고서 모델
+                    <select
+                      value={reportArtifact.id}
+                      onChange={(e) => setSelectedReportId(e.target.value)}
+                    >
+                      {artifacts.data?.items.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name ?? "ML 가격 모델"} · {item.id.slice(0, 8)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="muted">
+                    {artifacts.data?.items.length ?? 0}개 등록 버전
+                  </span>
                 </div>
-                <ModelSummary artifact={item} />
-              </section>
-            ))}
+                <section className="panel" key={reportArtifact.id}>
+                  <div className="panel-heading">
+                    <div>
+                      <h2>{reportArtifact.name ?? "ML 가격 모델"}</h2>
+                      <p className="artifact-id">
+                        모델 ID · {reportArtifact.id}
+                      </p>
+                    </div>
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setArtifactId(reportArtifact.id);
+                        setMode("COMPARE");
+                        setTab("시장 · 시나리오");
+                      }}
+                    >
+                      이 모델로 비교
+                    </button>
+                  </div>
+                  <ModelSummary artifact={reportArtifact} />
+                </section>
+              </>
+            )}
           </>
         )}
         <footer>
-          OPTION RISK / PORTFOLIO LAB{" "}
-          <span>
-            RISK-NEUTRAL VALUATION · DETERMINISTIC STRESS · NOT VaR / ES
-          </span>
+          <span>유럽형 옵션 · USD · ACT/365F</span>
+          <span>결정론적 스트레스 · VaR/ES 제외</span>
         </footer>
       </main>
     </div>

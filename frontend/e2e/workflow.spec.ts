@@ -1,4 +1,17 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+async function expectNoPageOverflow(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Math.max(
+          document.body.scrollWidth,
+          document.documentElement.scrollWidth,
+        ),
+      ),
+    )
+    .toBeLessThanOrEqual(page.viewportSize()!.width);
+}
 
 test("login, immutable input, reference valuation, compare, export and responsive layout", async ({
   page,
@@ -45,7 +58,7 @@ test("login, immutable input, reference valuation, compare, export and responsiv
   await expect(page.locator(".js-plotly-plot")).toBeVisible();
   await page.screenshot({ path: "../work/ui-reference.png", fullPage: true });
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: "JSON ↓" }).click();
+  await page.getByRole("link", { name: "JSON 다운로드" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/\.json$/);
 
@@ -72,14 +85,66 @@ test("login, immutable input, reference valuation, compare, export and responsiv
     .first()
     .click();
   await expect(
-    page.getByRole("heading", { name: "같은 조건, 두 개의 가격." }),
+    page.getByRole("heading", { name: "Heston 기준 모델과 MLP 비교" }),
   ).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+
+  const navigation = page.getByRole("navigation", { name: "주요 화면" });
+  const reportSelector = page.getByLabel("검증 보고서 모델");
+  const lastReportId = await reportSelector
+    .locator("option")
+    .last()
+    .getAttribute("value");
+  // CI may register one artifact; locally exercise a second version when available.
+  for (const reportId of new Set([artifactId!, lastReportId!])) {
+    await reportSelector.selectOption(reportId);
+    await expect(page.locator(".artifact-id")).toHaveCount(1);
+    await expect(page.locator(".artifact-id")).toContainText(reportId);
+  }
+  await page.getByRole("button", { name: "이 모델로 비교" }).click();
+  await expect(page.getByLabel("실행 모드")).toHaveValue("COMPARE");
+  await expect(page.getByLabel("ML 모델 버전")).toHaveValue(lastReportId!);
+  await navigation.getByRole("button", { name: "ML 검증" }).click();
+  const tabs = ["포지션", "시장 · 시나리오", "평가 · 실행 이력", "ML 검증"];
+  for (const width of [1440, 1024, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    for (const tab of tabs) {
+      await test.step(`${width}px: ${tab} navigation and page overflow`, async () => {
+        const button = navigation.getByRole("button", { name: tab });
+        await button.click();
+        await expect(button).toHaveAttribute("aria-current", "page");
+        await expect(button).toBeInViewport();
+        await expectNoPageOverflow(page);
+      });
+    }
+  }
   await page.screenshot({ path: "../work/ui-mobile.png", fullPage: true });
-  const width = await page.evaluate(() => ({
-    body: document.body.scrollWidth,
-    viewport: window.innerWidth,
-  }));
-  expect(width.body).toBeLessThanOrEqual(width.viewport);
+
+  // Navigation and wide financial tables must remain reachable with a keyboard.
+  const positions = navigation.getByRole("button", { name: "포지션" });
+  const market = navigation.getByRole("button", { name: "시장 · 시나리오" });
+  await positions.focus();
+  await page.keyboard.press("Tab");
+  await expect(market).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(market).toHaveAttribute("aria-current", "page");
+  await positions.focus();
+  await page.keyboard.press("Enter");
+  const contracts = page.getByRole("region", { name: "옵션 계약 표" });
+  await contracts.focus();
+  await expect(contracts).toBeFocused();
+  if (
+    await contracts.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    )
+  ) {
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(() => contracts.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(0);
+  }
+  const lastColumn = contracts.getByRole("columnheader").last();
+  await lastColumn.scrollIntoViewIfNeeded();
+  await expect(lastColumn).toBeInViewport({ ratio: 0.9 });
+  await expectNoPageOverflow(page);
   expect(errors).toEqual([]);
 });
