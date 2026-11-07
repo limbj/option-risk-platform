@@ -50,12 +50,21 @@ test("login, immutable input, reference valuation, compare, export and responsiv
   await expect(page.getByRole("status")).toContainText(
     "입력 버전을 저장했습니다",
   );
+  await expect(page.getByLabel("저장된 버전 열기")).not.toHaveValue("");
+  const savedInputId = await page.getByLabel("저장된 버전 열기").inputValue();
   await page.getByRole("button", { name: "평가 실행" }).click();
   await expect(
     page.getByRole("heading", { name: /평가 결과 완료/ }),
   ).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("4 / 4 셀 처리 · 실패 0")).toBeVisible();
   await expect(page.locator(".js-plotly-plot")).toBeVisible();
+  await expect(page.locator(".history")).not.toHaveAttribute("open", "");
+  await page.locator(".history > summary").click();
+  await expect(page.locator(".run-item.selected time")).toHaveAttribute(
+    "datetime",
+    /\d{4}-\d{2}-\d{2}T/,
+  );
+  await page.locator(".history > summary").click();
   await page.screenshot({ path: "../work/ui-reference.png", fullPage: true });
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "JSON 다운로드" }).click();
@@ -66,6 +75,7 @@ test("login, immutable input, reference valuation, compare, export and responsiv
     .getByRole("button", { name: "시장 · 시나리오", exact: false })
     .first()
     .click();
+  await expect(page.getByLabel("저장된 버전 열기")).toHaveValue(savedInputId);
   await page.getByLabel("실행 모드").selectOption("COMPARE");
   const options = page.getByLabel("ML 모델 버전").locator("option");
   await expect(options.nth(1)).toHaveAttribute("value", /.+/);
@@ -105,7 +115,7 @@ test("login, immutable input, reference valuation, compare, export and responsiv
   await expect(page.getByLabel("ML 모델 버전")).toHaveValue(lastReportId!);
   await navigation.getByRole("button", { name: "ML 검증" }).click();
   const tabs = ["포지션", "시장 · 시나리오", "평가 · 실행 이력", "ML 검증"];
-  for (const width of [1440, 1024, 390]) {
+  for (const width of [1440, 1024, 390, 320]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     for (const tab of tabs) {
       await test.step(`${width}px: ${tab} navigation and page overflow`, async () => {

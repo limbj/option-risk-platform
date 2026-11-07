@@ -69,6 +69,28 @@ function BrandMark() {
   );
 }
 
+function NavigationIcon({ index }: { index: number }) {
+  const paths = [
+    "M4 4h16v16H4z M4 10h16 M10 4v16",
+    "M4 18V6 M10 18V3 M16 18V9 M22 18V5 M2 21h22",
+    "M3 18l5-5 4 2 8-10 M15 5h5v5",
+    "M8 3h8l5 9-5 9H8l-5-9z M8 3l4 9 4-9 M3 12h18 M8 21l4-9 4 9",
+  ];
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={paths[index]} />
+    </svg>
+  );
+}
+
 function NumberField({
   label,
   value,
@@ -307,23 +329,30 @@ export default function App() {
           }}
         >
           <BrandMark />
-          <span>
-            OPTION <b>RISK</b>
+          <span className="brand-copy">
+            Option Risk<small>포트폴리오 위험 분석</small>
           </span>
         </a>
         <nav className="workspace-nav" aria-label="주요 화면">
-          {tabs.map((item) => (
+          {tabs.map((item, index) => (
             <button
               key={item}
               className={tab === item ? "active" : ""}
               aria-current={tab === item ? "page" : undefined}
               onClick={() => setTab(item)}
             >
-              {item}
+              <NavigationIcon index={index} />
+              <span>{item}</span>
             </button>
           ))}
         </nav>
         <div className="workspace-context">
+          <div className="workspace-engine">
+            <span>평가 엔진</span>
+            <strong>
+              Heston <em>+ MLP</em>
+            </strong>
+          </div>
           {session.data?.localDemoMode ? (
             <div className="logout">로컬 작업공간 · 자동 진입</div>
           ) : (
@@ -433,7 +462,7 @@ export default function App() {
               <label>
                 저장된 버전 열기
                 <select
-                  defaultValue=""
+                  value={saved?.id ?? ""}
                   onChange={async (e) => {
                     if (!e.target.value) return;
                     const item = await api<InputVersion>(
@@ -921,9 +950,17 @@ export default function App() {
                 </section>
               </>
             )}
-            <section className="execution-bar">
+            <section
+              className="execution-bar"
+              aria-label="입력 저장과 평가 실행"
+            >
               <div>
-                <h2 className="execution-title">평가 실행</h2>
+                <h2 className="execution-title">
+                  평가 실행{" "}
+                  <span className={`pill ${saved ? "completed" : "neutral"}`}>
+                    {saved ? "입력 저장됨" : "저장 필요"}
+                  </span>
+                </h2>
                 <p>
                   {saved
                     ? "저장된 입력 버전을 사용합니다."
@@ -977,7 +1014,15 @@ export default function App() {
         )}
         {tab === "평가 · 실행 이력" && (
           <div className="results-layout">
-            <section className="panel history">
+            <details className="panel history" open={!selectedRun}>
+              <summary>
+                실행 이력 <span>{runs.data?.items.length ?? 0}건</span>
+                <small>
+                  {selectedRun
+                    ? `선택된 실행 ${selectedRun.slice(0, 8)}`
+                    : "평가할 실행을 선택하세요"}
+                </small>
+              </summary>
               <div className="panel-heading">
                 <h2>실행 이력</h2>
                 <button
@@ -1009,12 +1054,12 @@ export default function App() {
                     <small>{item.mode}</small>
                   </div>
                   <strong>{item.id.slice(0, 8)}</strong>
-                  <time>
+                  <time dateTime={item.created_at}>
                     {new Date(item.created_at).toLocaleString("ko-KR")}
                   </time>
                 </button>
               ))}
-            </section>
+            </details>
             <div>
               {run.data ? (
                 <>
@@ -1030,7 +1075,18 @@ export default function App() {
                           </span>
                         </h2>
                         <p className="run-identity">
-                          {run.data.id} · {run.data.mode}
+                          {run.data.mode} · 실행 {run.data.id.slice(0, 8)}
+                        </p>
+                        <p className="result-asof">
+                          평가 기준일{" "}
+                          <time
+                            dateTime={
+                              run.data.pinned_inputs?.market.valuation_date
+                            }
+                          >
+                            {run.data.pinned_inputs?.market.valuation_date ??
+                              "—"}
+                          </time>
                         </p>
                       </div>
                       <div className="button-row">
@@ -1251,6 +1307,12 @@ export default function App() {
                   </section>
                   <details className="panel provenance">
                     <summary>입력 · 계산 출처 보기</summary>
+                    <p className="muted">
+                      실행 시각:{" "}
+                      <time dateTime={run.data.created_at}>
+                        {new Date(run.data.created_at).toLocaleString("ko-KR")}
+                      </time>
+                    </p>
                     <p className="muted">
                       같은 입력과 모델 버전으로 수치 허용오차 안에서 재현합니다.
                     </p>
