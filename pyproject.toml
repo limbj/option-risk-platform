@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "option-risk-platform"
+version = "0.1.0"
+description = "Reproducible option portfolio valuation and stress testing"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Django>=5.2.19,<5.3",
+    "djangorestframework>=3.16,<4",
+    "psycopg[binary]>=3.2,<4",
+    "numpy>=2.2,<3",
+    "scipy>=1.15,<2",
+    "QuantLib>=1.39,<2",
+    "celery[redis]>=5.5,<6",
+    "gunicorn>=23,<24; sys_platform != 'win32'",
+    "whitenoise>=6.9,<7",
+]
+
+[project.optional-dependencies]
+ml = ["torch>=2.9,<3"]
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6,<7",
+    "pytest>=8.4,<10",
+    "pytest-django>=4.11,<5",
+    "ruff>=0.14,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/config", "src/apps", "src/quant", "src/ml"]
+
+[tool.uv]
+required-version = "==0.13.7"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'win32' or sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+testpaths = ["tests"]
+addopts = "--strict-config --strict-markers -ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["work"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+

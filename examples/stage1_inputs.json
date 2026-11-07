@@ -1,0 +1,56 @@
+{
+  "market": {
+    "valuation_date": "2026-11-08",
+    "spot": 100.0,
+    "rate": 0.03,
+    "sigma0": 0.2,
+    "underlying": "SYNTH_INDEX",
+    "currency": "USD"
+  },
+  "model": {
+    "kappa": 2.0,
+    "theta": 0.04,
+    "xi": 0.3,
+    "rho": -0.7
+  },
+  "positions": [
+    {
+      "contract": {
+        "option_type": "call",
+        "strike": 100.0,
+        "expiry": "2027-11-08",
+        "underlying": "SYNTH_INDEX",
+        "currency": "USD"
+      },
+      "side": "long",
+      "quantity": 10,
+      "multiplier": 100.0
+    },
+    {
+      "contract": {
+        "option_type": "put",
+        "strike": 95.0,
+        "expiry": "2027-05-08",
+        "underlying": "SYNTH_INDEX",
+        "currency": "USD"
+      },
+      "side": "short",
+      "quantity": -5,
+      "multiplier": 100.0
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "base",
+      "spot_shock_pct": 0.0,
+      "sigma0_shock_pp": 0.0,
+      "rate_shock_bp": 0.0
+    },
+    {
+      "name": "spot-down-vol-up-rates-up",
+      "spot_shock_pct": -10.0,
+      "sigma0_shock_pp": 5.0,
+      "rate_shock_bp": 100.0
+    }
+  ]
+}

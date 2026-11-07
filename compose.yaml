@@ -1,0 +1,106 @@
+name: option-risk-platform
+
+x-app-environment: &app-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  POSTGRES_DB: ${POSTGRES_DB:-option_risk}
+  POSTGRES_USER: ${POSTGRES_USER:-option_risk}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  CELERY_BROKER_URL: redis://redis:6379/0
+  ARTIFACT_ROOT: /app/artifacts
+  CODE_VERSION: ${CODE_VERSION:-uncommitted}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-option_risk}
+      POSTGRES_USER: ${POSTGRES_USER:-option_risk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    image: option-risk-platform-app
+    environment: *app-environment
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    image: option-risk-platform-app
+    environment: *app-environment
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    command: ["celery", "-A", "config.celery:app", "worker", "--pool=prefork", "--concurrency=2", "--loglevel=INFO"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dispatcher:
+    image: option-risk-platform-app
+    environment: *app-environment
+    command: ["python", "manage.py", "dispatch_outbox"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - api
+
+  tests:
+    build: .
+    image: option-risk-platform-app
+    profiles: ["test"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+    command: ["pytest"]
+
+  postgres-tests:
+    image: option-risk-platform-app
+    profiles: ["test"]
+    environment:
+      <<: *app-environment
+      DJANGO_SETTINGS_MODULE: config.settings.postgres_test
+    command: ["pytest", "tests/django"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

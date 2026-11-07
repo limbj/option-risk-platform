@@ -1,0 +1,6 @@
+{
+  "normalized_mean": 0.001,
+  "normalized_p99": 0.005,
+  "normalized_maximum": 0.01,
+  "portfolio_pnl_maximum": 0.0015
+}

@@ -1,0 +1,168 @@
+name: MVP acceptance
+
+"on":
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Python, PostgreSQL, Linux stack and browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    # Disposable CI-only values; no repository or deployment secrets are used.
+    env:
+      DJANGO_SECRET_KEY: ci-only-django-key-for-disposable-tests-never-use-for-deployment-2026
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      POSTGRES_DB: option_risk_ci
+      POSTGRES_USER: option_risk_ci
+      POSTGRES_PASSWORD: ci-only-postgres-password
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      DEMO_USERNAME: demo
+      DEMO_PASSWORD: ci-only-demo-password-2026
+      STACK_SECOND_USERNAME: ci-observer
+      STACK_SECOND_PASSWORD: ci-only-observer-password-2026
+      WEB_URL: http://127.0.0.1:5173
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pinned uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
+
+      - name: Install Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked Python dependencies including ML
+        run: |
+          mkdir -p work/ci
+          uv python install 3.12
+          uv sync --locked --extra ml
+
+      - name: Check Python lint and formatting
+        run: |
+          uv run --locked --extra ml ruff check .
+          uv run --locked --extra ml ruff format --check .
+
+      - name: Run financial, ML and fast Django tests
+        run: |
+          uv run --locked --extra ml pytest --junitxml=work/ci/pytest-host.xml
+          uv run --locked --extra ml python manage.py check --settings=config.settings.test
+          uv run --locked --extra ml python manage.py makemigrations --check --dry-run --settings=config.settings.test
+
+      - name: Install and verify frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npx playwright install --with-deps chromium
+
+      - name: Start disposable PostgreSQL and Redis
+        run: |
+          docker compose config --quiet
+          docker compose up -d --wait --wait-timeout 120 db redis
+
+      - name: Verify PostgreSQL integrity, concurrency and recovery
+        run: |
+          uv run --locked --extra ml pytest --ds=config.settings.postgres_test tests/django --junitxml=work/ci/pytest-postgres.xml
+
+      - name: Build application and web images once
+        run: docker compose build api web
+
+      - name: Verify the Linux application image
+        run: |
+          docker compose --profile test run --rm --no-deps -T tests pytest -ra | tee work/ci/pytest-container.log
+          docker compose --profile test run --rm --no-deps -T postgres-tests pytest tests/django -ra | tee work/ci/pytest-postgres-container.log
+
+      - name: Train and validate the offline comparison artifact
+        run: |
+          uv run --locked --extra ml python -m ml.train \
+            --output artifacts/baseline --dataset data/demo.npz \
+            --samples 16000 --epochs 350 | tee work/ci/ml-training.log
+          uv run --locked --extra ml python -m ml.evaluate \
+            --artifact artifacts/baseline --dataset data/demo.npz \
+            --gates docs/ml-demo-gates.json --output artifacts/demo | tee work/ci/ml-gates.log
+          uv run --locked --extra ml python - <<'PY'
+          import json
+          from pathlib import Path
+          validation = json.loads(Path("artifacts/demo/manifest.json").read_text())["validation"]
+          if validation["status"] != "passed":
+              raise SystemExit(f"ML comparison quality gates failed: {validation}")
+          print("ML comparison quality gates passed")
+          PY
+
+      - name: Prepare accounts and register exactly one demo artifact
+        run: |
+          uv run --locked --extra ml python manage.py migrate --noinput
+          uv run --locked --extra ml python manage.py seed_demo --username "$DEMO_USERNAME"
+          DEMO_PASSWORD="$STACK_SECOND_PASSWORD" uv run --locked --extra ml python manage.py seed_demo --username "$STACK_SECOND_USERNAME"
+          uv run --locked --extra ml python manage.py register_artifact --directory artifacts/demo --name "CI Heston MLP demo"
+
+      - name: Start and await the complete Linux stack
+        run: |
+          docker compose up -d --no-build api worker dispatcher web
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused \
+            http://127.0.0.1:8000/api/health/ > work/ci/api-health.json
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused \
+            http://127.0.0.1:5173/ > work/ci/web-index.html
+
+      - name: Verify actual HTTP, queue, ownership and dispatcher recovery
+        run: |
+          uv run --locked --extra ml python scripts/verify_stack.py \
+            --base-url http://127.0.0.1:8000 --timeout 120 \
+            --recovery-dispatcher --output work/ci/stack-validation.json | tee work/ci/stack-validation.log
+
+      - name: Verify browser workflow and responsive layout
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Collect container diagnostics
+        if: always()
+        run: |
+          mkdir -p work/ci
+          docker compose ps --all > work/ci/compose-ps.txt 2>&1 || true
+          docker compose logs --no-color --timestamps > work/ci/compose.log 2>&1 || true
+
+      - name: Upload validation reports and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: acceptance-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            work/ci/
+            work/ui-*.png
+            frontend/test-results/
+            frontend/playwright-report/
+            artifacts/baseline/validation_report.json
+            artifacts/demo/manifest.json
+            artifacts/demo/validation_report.json
+
+      - name: Remove disposable CI containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans
