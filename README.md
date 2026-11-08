@@ -48,21 +48,31 @@
 
 ```mermaid
 flowchart TB
-    subgraph HTTP["입력·조회"]
+    subgraph HTTP["01 입력·조회"]
         direction LR
         UI["<b>React · TypeScript</b><br/>입력 · 결과 · 검증"] --> API["<b>Django REST Framework</b><br/>세션 · CSRF · 소유권"]
-        API -->|atomic transaction| DB[("<b>PostgreSQL</b><br/>versions · runs · chunks<br/>outbox · results")]
+        API -->|원자적 저장| DB[("<b>PostgreSQL</b><br/>입력 버전 · 실행 · 결과")]
     end
-    subgraph JOBS["비동기 실행"]
+    subgraph JOBS["02 비동기 실행"]
         direction LR
-        DIS["<b>Outbox dispatcher</b><br/>발행 · 만료 작업 복구"] -->|chunk ID| RED["<b>Redis</b>"]
-        RED --> WORK["<b>Celery Linux prefork</b><br/>claim · calculate · finalize"]
+        DIS["<b>Outbox dispatcher</b><br/>작업 발행 · 복구"] -->|청크 ID| RED["<b>Redis</b><br/>작업 큐"]
+        RED --> WORK["<b>Celery</b><br/>작업 수신 · 계산 · 저장"]
     end
-    DB -->|pending events| DIS
-    WORK -->|고정 입력 조회·결과 저장| DB
-    WORK --> QUANT["<b>quant</b><br/>BS · Heston · 민감도"]
-    WORK --> ML["<b>ml</b><br/>비교 추론 · 지원 영역"]
-    ART["<b>모델 artifact</b><br/>manifest · weights · report"] --> ML
+    subgraph ENGINE["03 계산 엔진"]
+        direction LR
+        QUANT["<b>quant</b><br/>Heston · 민감도"]
+        ML["<b>ml</b><br/>비교 추론 · 지원 영역"]
+        ART["<b>모델 artifact</b><br/>가중치 · 검증 보고서"] --> ML
+    end
+    DB -->|미발행 이벤트| DIS
+    WORK <-.->|입력 조회 · 결과 저장| DB
+    WORK --> QUANT
+    WORK --> ML
+    WORK ~~~ ART
+
+    style HTTP fill:#315ae80d,stroke:#9db6e2
+    style JOBS fill:#64748b0d,stroke:#b5c0cf
+    style ENGINE fill:#6366f10d,stroke:#b5b2dc
 ```
 
 ## 실행 화면
