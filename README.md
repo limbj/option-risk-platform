@@ -50,19 +50,19 @@
 flowchart TB
     subgraph HTTP["<b>01 입력·조회</b>"]
         direction LR
-        UI["<b>React · TypeScript</b><br/>입력 · 결과 · 검증"] --> API["<b>Django REST Framework</b><br/>세션 · CSRF · 소유권"]
-        API -->|단일 트랜잭션| DB[("<b>PostgreSQL</b><br/>입력 버전 · 실행 · 결과")]
+        UI["<b>React · TypeScript</b>"] --> API["<b>Django REST Framework</b>"]
+        API -->|단일 트랜잭션| DB[("<b>PostgreSQL</b>")]
     end
     subgraph JOBS["<b>02 비동기 실행</b>"]
         direction LR
-        DIS["<b>Outbox Dispatcher</b><br/>작업 발행 · 복구"] -->|청크 ID| RED["<b>Redis</b>"]
-        RED --> WORK["<b>Celery</b><br/>작업 수신 · 계산 · 저장"]
+        DIS["<b>Outbox Dispatcher</b>"] -->|청크 ID| RED["<b>Redis</b>"]
+        RED --> WORK["<b>Celery</b>"]
     end
     subgraph ENGINE["<b>03 계산 엔진</b>"]
         direction LR
         QUANT["<b>Quant</b><br/>Heston · 민감도"]
-        ML["<b>ML</b><br/>PyTorch MLP<br/>비교 추론 · 지원 영역"]
-        ART["<b>Model Artifact</b><br/>가중치 · 검증 보고서"] --> ML
+        ML["<b>ML</b><br/>PyTorch MLP"]
+        ART["<b>Model Artifact</b>"] --> ML
     end
     DB -->|미발행 이벤트| DIS
     WORK <-.->|입력 조회 · 결과 저장| DB
