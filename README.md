@@ -18,7 +18,7 @@
 
 ## 핵심 설계
 
-금융 계산과 ML을 Django·DB에 의존하지 않는 패키지로 분리하고, API와 worker가 같은 입력 버전과 계산 코드를 사용합니다.
+금융 계산과 ML을 Django·DB에 의존하지 않는 패키지로 분리하고, API와 워커가 같은 입력 버전과 계산 코드를 사용합니다.
 
 <table>
   <thead>
@@ -27,19 +27,19 @@
   <tbody>
     <tr>
       <td><strong>금융 계산</strong></td>
-      <td>QuantLib Heston 가격·중앙차분 민감도·스트레스 P&amp;L. Black–Scholes 직접 구현 및 교차검증</td>
+      <td>QuantLib 기반 Heston 가격 평가·중앙차분 민감도·스트레스 손익 계산. Black–Scholes 직접 구현 및 교차 검증</td>
     </tr>
     <tr>
       <td><strong>재현성</strong></td>
-      <td>입력 버전·SHA-256·수치 설정·모델 파일을 고정하고 실행별 계산 출처 기록</td>
+      <td>입력 버전·SHA-256 해시·수치 설정·모델 파일을 고정하고 실행별 계산 출처 기록</td>
     </tr>
     <tr>
       <td><strong>작업 복구</strong></td>
-      <td>실행·청크·outbox를 단일 트랜잭션으로 저장. worker의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지</td>
+      <td>실행·청크·outbox를 단일 트랜잭션으로 저장. 워커의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지</td>
     </tr>
     <tr>
       <td><strong>ML 비교</strong></td>
-      <td>PyTorch CPU MLP <code>4 → 96 → 96 → 64 → 1</code>로 Heston 가격 근사. 비교 전용이며 지원 영역 밖 입력은 거부</td>
+      <td>PyTorch CPU MLP <code>4 → 96 → 96 → 64 → 1</code>로 Heston 가격 근사. 비교 전용이며 지원 범위 밖 입력은 거부</td>
     </tr>
   </tbody>
 </table>
@@ -97,9 +97,9 @@ flowchart TB
 
 ### 모델 검증
 
-모델별 지원 영역·가격 오차·P&L 오차·실행 시간을 확인하고 비교할 모델을 선택합니다.
+모델별 지원 범위·가격 오차·손익 오차·실행 시간을 확인하고 비교할 모델을 선택합니다.
 
-<img src="docs/images/ml-validation.png" width="100%" alt="선택한 MLP 모델의 지원 범위·가격 오차·P&L 오차·동일 workload 실행 시간 보고서">
+<img src="docs/images/ml-validation.png" width="100%" alt="선택한 MLP 모델의 지원 범위·가격 오차·손익 오차·동일 입력의 실행 시간 보고서">
 
 ## 기술 스택
 
@@ -111,12 +111,12 @@ flowchart TB
 | 비동기 실행 | Celery · Redis |
 | 테스트·실행 환경 | pytest · Hypothesis · Vitest · Playwright · Docker Compose · GitHub Actions |
 
-수치 계산·ML 오차·API·DB 동시성·작업 복구·브라우저 흐름을 각각 검증합니다.
-세부 결과는 [수치 검증](docs/numerical-validation.md), [ML 검증](docs/ml-validation.md), [CI](docs/ci-validation.md), [서비스 복구 검증](docs/stack-validation.md)에 정리했습니다.
+수치 계산·ML 오차·API·DB 동시성·작업 복구·화면 동작을 각각 검증합니다.
+세부 결과는 [수치 검증](docs/numerical-validation.md), [ML 검증](docs/ml-validation.md), [CI 검증](docs/ci-validation.md), [서비스 복구 검증](docs/stack-validation.md)에 정리했습니다.
 
 ## 로컬 실행
 
-Docker Desktop의 **Linux 엔진**, Python, **uv 0.13.7**을 준비하고 저장소 루트에서 실행합니다.
+Docker Desktop의 **Linux 컨테이너 모드**, Python, **uv 0.13.7**을 준비하고 저장소 루트에서 실행합니다.
 애플리케이션용 Python 3.12는 uv가 관리합니다.
 
 ```powershell
@@ -137,7 +137,7 @@ python scripts/bootstrap_demo.py
 
 </details>
 
-합성 지수 하나·USD·무배당 유럽형 현금결제 콜/풋을 지원하는 로컬 분석 도구입니다.
+지원 대상은 단일 합성 지수의 USD 표시 유럽형 콜·풋이며, 무배당·현금결제를 가정합니다.
 
 ## 상세 문서
 
