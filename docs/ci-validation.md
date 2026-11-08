@@ -3,7 +3,7 @@
 `.github/workflows/ci.yml`의 `CI`는 push, pull request, 수동 실행에서
 단일 Ubuntu job을 수행한다.
 
-2026-11-08 02:42(KST), commit `bd6863d35fe89096a4bd9ba595b3a3da71637cc3`의
+Commit `bd6863d35fe89096a4bd9ba595b3a3da71637cc3`의
 [GitHub Actions 실행 42397207266](https://github.com/limbj/option-risk-platform/actions/runs/42397207266)이
 **성공**했다. 전체 job 소요 시간은 5분 3초였다.
 

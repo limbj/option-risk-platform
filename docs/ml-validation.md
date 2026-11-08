@@ -1,6 +1,6 @@
 # Heston 가격 근사 모델 검증
 
-2026-11-08(KST), CPU에서 생성·학습·평가한 `artifacts/demo`의 검증 결과다.
+CPU에서 생성·학습·평가한 `artifacts/demo`의 검증 결과다.
 이 모델은 **COMPARE 전용**이며 가격·민감도·stress P&L의 기준은 QuantLib reference다.
 
 ## 구현과 재현
@@ -40,7 +40,7 @@ Gate 실패 시 train/evaluate CLI는 실패 report와 manifest를 보존하고 
 | Seed | 1729; deterministic algorithms; best epoch=348, 독립 tuning split의 MSE로 선택 |
 
 Teacher label은 float64이다. residual maturity는 실제 날짜로 환산하여 생성하므로
-feature의 `T`와 QuantLib의 날짜 기반 `T`가 일치한다. 평가일은 2026-11-08이다.
+feature의 `T`와 QuantLib의 날짜 기반 `T`가 일치한다.
 출력 bound 구조는 학습 모델의 일부이며, 추론 실패 값을 0으로 바꾸거나 사후 clamp하지 않는다.
 
 학습에서 다음 연속 영역 전체를 제외하고 독립적으로 평가했다:

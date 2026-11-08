@@ -61,7 +61,7 @@ uv run --locked --extra ml --env-file .env python scripts/verify_worker_recovery
 
 ## 실행 결과
 
-2026-11-08 02:01 KST, `http://127.0.0.1:8000`의 Linux container 환경에서
+`http://127.0.0.1:8000`의 Linux container 환경에서
 두 사용자 계정과 `--recovery-dispatcher`를 포함한 **19개 검사·6개 실행이 통과**했다.
 전체 실행시간은 20.24초였으며 종료 시 모든 서비스가 running 상태였다.
 
@@ -88,7 +88,7 @@ Dispatcher 중단 중 새 run은 HTTP 202로 접수되어 DB의 QUEUED 상태로
 
 ### SIGKILL 및 lease 복구
 
-2026-11-08 01:55:13 KST에 별도 `verify_worker_recovery.py` 실험에서 worker container를
+별도 `verify_worker_recovery.py` 실험에서 worker container를
 SIGKILL로 종료하고 즉시 재시작했다. 이때 계산 중이던 scenario 6·7의 lease가 남아 있었다.
 계산이 끝난 9,800개 셀은 유지됐고, 288.7초 관측까지 두 chunk의 attempts는 1이었다.
 
@@ -116,7 +116,7 @@ Run ID는 `899acb1d-deca-4980-ba1b-945d41c6542f`이며, DB snapshot과 20초 간
 
 ### API 주소 변경 후 nginx 자동 복구
 
-2026-11-08 02:08 KST에 프로젝트 Docker network의 사용 중인 주소를 확인한 뒤 API 주소를
+프로젝트 Docker network의 사용 중인 주소를 확인한 뒤 API 주소를
 `172.18.0.6`에서 미사용 주소 `172.18.0.200`으로 바꿨다. `api` DNS alias를 유지했으며,
 web container 재시작 없이 일시적인 연결 실패 후 **3.54초에** nginx 경유
 `/api/session/`이 HTTP 200과 인증된 demo session을 반환했다.
