@@ -35,7 +35,7 @@
     </tr>
     <tr>
       <td><strong>작업 복구</strong></td>
-      <td>실행·청크·outbox의 원자적 저장. worker의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지</td>
+      <td>실행·청크·outbox를 단일 트랜잭션으로 저장. worker의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지</td>
     </tr>
     <tr>
       <td><strong>ML 비교</strong></td>
@@ -48,17 +48,17 @@
 
 ```mermaid
 flowchart TB
-    subgraph HTTP["01 입력·조회"]
+    subgraph HTTP["<b>01 입력·조회</b>"]
         direction LR
         UI["<b>React · TypeScript</b><br/>입력 · 결과 · 검증"] --> API["<b>Django REST Framework</b><br/>세션 · CSRF · 소유권"]
-        API -->|원자적 저장| DB[("<b>PostgreSQL</b><br/>입력 버전 · 실행 · 결과")]
+        API -->|단일 트랜잭션| DB[("<b>PostgreSQL</b><br/>입력 버전 · 실행 · 결과")]
     end
-    subgraph JOBS["02 비동기 실행"]
+    subgraph JOBS["<b>02 비동기 실행</b>"]
         direction LR
         DIS["<b>Outbox dispatcher</b><br/>작업 발행 · 복구"] -->|청크 ID| RED["<b>Redis</b><br/>작업 큐"]
         RED --> WORK["<b>Celery</b><br/>작업 수신 · 계산 · 저장"]
     end
-    subgraph ENGINE["03 계산 엔진"]
+    subgraph ENGINE["<b>03 계산 엔진</b>"]
         direction LR
         QUANT["<b>quant</b><br/>Heston · 민감도"]
         ML["<b>ml</b><br/>비교 추론 · 지원 영역"]
