@@ -55,24 +55,7 @@ Heston의 초기 분산은 `(sigma0 + delta_sigma0)²`로 갱신하며 잘못된
 메시지 전달과 계산은 중복될 수 있습니다. 중복 처리·작업자 유실을 전제로 결과 저장을 제어하며,
 실패한 청크와 완료된 청크를 구분합니다. [백엔드 설계](docs/backend-design.md)에 잠금 순서·복구 조건·소유권 검사를 설명했습니다.
 
-```mermaid
-flowchart TB
-    subgraph HTTP["입력·조회"]
-        direction LR
-        UI["React · TypeScript<br/>입력 · 결과 · 검증"] --> API["Django REST Framework<br/>세션 · CSRF · 소유권"]
-        API -->|atomic transaction| DB[("PostgreSQL<br/>versions · runs · chunks<br/>outbox · results")]
-    end
-    subgraph JOBS["비동기 실행"]
-        direction LR
-        DIS["Outbox dispatcher<br/>발행 · 만료 작업 복구"] -->|chunk ID| RED["Redis"]
-        RED --> WORK["Celery Linux prefork<br/>claim · calculate · finalize"]
-    end
-    DB -->|pending events| DIS
-    WORK -->|고정 입력 조회·결과 저장| DB
-    WORK --> QUANT["quant<br/>BS · Heston · 민감도"]
-    WORK --> ML["ml<br/>비교 추론 · 지원 영역"]
-    ART["모델 artifact<br/>manifest · weights · report"] --> ML
-```
+<img src="docs/images/execution-flow.png" width="100%" alt="실행 흐름: React에서 Django API와 PostgreSQL로 입력을 저장하고, Outbox dispatcher·Redis·Celery를 거쳐 Heston 기준 계산과 MLP 비교 추론을 수행합니다. 작업자는 고정 입력을 조회하고 결과를 DB에 저장합니다.">
 
 ## 실행 화면
 
