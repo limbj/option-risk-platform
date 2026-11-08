@@ -20,12 +20,29 @@
 
 금융 계산과 ML을 Django·DB에 의존하지 않는 패키지로 분리하고, API와 worker가 같은 입력 버전과 계산 코드를 사용합니다.
 
-| 핵심 | 구현 |
-| --- | --- |
-| **금융 계산** | QuantLib Heston 가격·중앙차분 민감도·스트레스 P&L. Black–Scholes 직접 구현 및 교차검증 |
-| **재현성** | 입력 버전·SHA-256·수치 설정·모델 파일을 고정하고 실행별 계산 출처 기록 |
-| **작업 복구** | 실행·청크·outbox의 원자적 저장. worker의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지 |
-| **ML 비교** | PyTorch CPU MLP `4 → 96 → 96 → 64 → 1`로 Heston 가격 근사. 비교 전용이며 지원 영역 밖 입력은 거부 |
+<table>
+  <thead>
+    <tr><th width="120">핵심</th><th>구현</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>금융 계산</strong></td>
+      <td>QuantLib Heston 가격·중앙차분 민감도·스트레스 P&amp;L. Black–Scholes 직접 구현 및 교차검증</td>
+    </tr>
+    <tr>
+      <td><strong>재현성</strong></td>
+      <td>입력 버전·SHA-256·수치 설정·모델 파일을 고정하고 실행별 계산 출처 기록</td>
+    </tr>
+    <tr>
+      <td><strong>작업 복구</strong></td>
+      <td>실행·청크·outbox의 원자적 저장. worker의 lease·attempt token과 결과 저장 제약으로 만료 작업 복구·중복 기록 방지</td>
+    </tr>
+    <tr>
+      <td><strong>ML 비교</strong></td>
+      <td>PyTorch CPU MLP <code>4 → 96 → 96 → 64 → 1</code>로 Heston 가격 근사. 비교 전용이며 지원 영역 밖 입력은 거부</td>
+    </tr>
+  </tbody>
+</table>
 
 <img src="docs/images/execution-flow.png" width="100%" alt="실행 흐름: React에서 Django API와 PostgreSQL로 입력을 저장하고, Outbox dispatcher·Redis·Celery를 거쳐 Heston 기준 계산과 MLP 비교 추론을 수행합니다. 작업자는 고정 입력을 조회하고 결과를 DB에 저장합니다.">
 
