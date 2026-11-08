@@ -55,14 +55,14 @@ flowchart TB
     end
     subgraph JOBS["<b>02 비동기 실행</b>"]
         direction LR
-        DIS["<b>Outbox dispatcher</b><br/>작업 발행 · 복구"] -->|청크 ID| RED["<b>Redis</b>"]
+        DIS["<b>Outbox Dispatcher</b><br/>작업 발행 · 복구"] -->|청크 ID| RED["<b>Redis</b>"]
         RED --> WORK["<b>Celery</b><br/>작업 수신 · 계산 · 저장"]
     end
     subgraph ENGINE["<b>03 계산 엔진</b>"]
         direction LR
         QUANT["<b>Quant</b><br/>Heston · 민감도"]
         ML["<b>ML</b><br/>PyTorch MLP<br/>비교 추론 · 지원 영역"]
-        ART["<b>모델 artifact</b><br/>가중치 · 검증 보고서"] --> ML
+        ART["<b>Model Artifact</b><br/>가중치 · 검증 보고서"] --> ML
     end
     DB -->|미발행 이벤트| DIS
     WORK <-.->|입력 조회 · 결과 저장| DB
