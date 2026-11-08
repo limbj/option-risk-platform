@@ -50,19 +50,19 @@
 flowchart TB
     subgraph HTTP["입력·조회"]
         direction LR
-        UI["React · TypeScript<br/>입력 · 결과 · 검증"] --> API["Django REST Framework<br/>세션 · CSRF · 소유권"]
-        API -->|atomic transaction| DB[("PostgreSQL<br/>versions · runs · chunks<br/>outbox · results")]
+        UI["<b>React · TypeScript</b><br/>입력 · 결과 · 검증"] --> API["<b>Django REST Framework</b><br/>세션 · CSRF · 소유권"]
+        API -->|atomic transaction| DB[("<b>PostgreSQL</b><br/>versions · runs · chunks<br/>outbox · results")]
     end
     subgraph JOBS["비동기 실행"]
         direction LR
-        DIS["Outbox dispatcher<br/>발행 · 만료 작업 복구"] -->|chunk ID| RED["Redis"]
-        RED --> WORK["Celery Linux prefork<br/>claim · calculate · finalize"]
+        DIS["<b>Outbox dispatcher</b><br/>발행 · 만료 작업 복구"] -->|chunk ID| RED["<b>Redis</b>"]
+        RED --> WORK["<b>Celery Linux prefork</b><br/>claim · calculate · finalize"]
     end
     DB -->|pending events| DIS
     WORK -->|고정 입력 조회·결과 저장| DB
-    WORK --> QUANT["quant<br/>BS · Heston · 민감도"]
-    WORK --> ML["ml<br/>비교 추론 · 지원 영역"]
-    ART["모델 artifact<br/>manifest · weights · report"] --> ML
+    WORK --> QUANT["<b>quant</b><br/>BS · Heston · 민감도"]
+    WORK --> ML["<b>ml</b><br/>비교 추론 · 지원 영역"]
+    ART["<b>모델 artifact</b><br/>manifest · weights · report"] --> ML
 ```
 
 ## 실행 화면
